@@ -130,6 +130,11 @@ export function resolveAdtUri(args: ResolveUriArgs): string {
     case 'ENHO/ENH':
       return `/sap/bc/adt/enhancements/${lowerName}`;
 
+    // ── Packages ─────────────────────────────────────────────────────
+    case 'DEVC':
+    case 'DEVC/K':
+      return `/sap/bc/adt/packages/${lowerName}`;
+
     default:
       // Fail loudly — silent name-heuristic fallbacks silently produce
       // wrong URIs that surface only at SAP with unhelpful 404s.

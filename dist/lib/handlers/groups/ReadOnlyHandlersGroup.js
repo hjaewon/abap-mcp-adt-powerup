@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReadOnlyHandlersGroup = void 0;
+const handleGetAtcFindings_1 = require("../../../handlers/atc/readonly/handleGetAtcFindings");
 const handleReadBehaviorDefinition_1 = require("../../../handlers/behavior_definition/readonly/handleReadBehaviorDefinition");
 const handleReadBehaviorImplementation_1 = require("../../../handlers/behavior_implementation/readonly/handleReadBehaviorImplementation");
 const handleReadClass_1 = require("../../../handlers/class/readonly/handleReadClass");
@@ -90,6 +91,11 @@ class ReadOnlyHandlersGroup extends BaseHandlerGroup_js_1.BaseHandlerGroup {
             {
                 toolDefinition: handleGetProgFullCode_1.TOOL_DEFINITION,
                 handler: (args) => (0, handleGetProgFullCode_1.handleGetProgFullCode)(this.context, args),
+            },
+            // ATC (ABAP Test Cockpit)
+            {
+                toolDefinition: handleGetAtcFindings_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGetAtcFindings_1.handleGetAtcFindings)(this.context, args),
             },
             // Read object source + metadata handlers
             {

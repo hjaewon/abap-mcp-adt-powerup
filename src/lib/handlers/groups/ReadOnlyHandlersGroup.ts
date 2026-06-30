@@ -1,4 +1,8 @@
 import {
+  TOOL_DEFINITION as GetAtcFindings_Tool,
+  handleGetAtcFindings,
+} from '../../../handlers/atc/readonly/handleGetAtcFindings';
+import {
   handleReadBehaviorDefinition,
   TOOL_DEFINITION as ReadBehaviorDefinition_Tool,
 } from '../../../handlers/behavior_definition/readonly/handleReadBehaviorDefinition';
@@ -184,6 +188,11 @@ export class ReadOnlyHandlersGroup extends BaseHandlerGroup {
       {
         toolDefinition: GetProgFullCode_Tool,
         handler: (args: any) => handleGetProgFullCode(this.context, args),
+      },
+      // ATC (ABAP Test Cockpit)
+      {
+        toolDefinition: GetAtcFindings_Tool,
+        handler: (args: any) => handleGetAtcFindings(this.context, args),
       },
       // Read object source + metadata handlers
       {
