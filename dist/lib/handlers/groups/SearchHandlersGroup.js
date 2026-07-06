@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SearchHandlersGroup = void 0;
 const handleGetObjectsByType_1 = require("../../../handlers/search/readonly/handleGetObjectsByType");
 const handleGetObjectsList_1 = require("../../../handlers/search/readonly/handleGetObjectsList");
+const handleGrepObjects_1 = require("../../../handlers/search/readonly/handleGrepObjects");
+const handleGrepPackages_1 = require("../../../handlers/search/readonly/handleGrepPackages");
 // Import search handlers
 // Import TOOL_DEFINITION from handlers
 const handleSearchObject_1 = require("../../../handlers/search/readonly/handleSearchObject");
@@ -21,6 +23,14 @@ class SearchHandlersGroup extends BaseHandlerGroup_js_1.BaseHandlerGroup {
             {
                 toolDefinition: handleSearchObject_1.TOOL_DEFINITION,
                 handler: (args) => (0, handleSearchObject_1.handleSearchObject)(this.context, args),
+            },
+            {
+                toolDefinition: handleGrepObjects_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGrepObjects_1.handleGrepObjects)(this.context, args),
+            },
+            {
+                toolDefinition: handleGrepPackages_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGrepPackages_1.handleGrepPackages)(this.context, args),
             },
             // Dynamic import handlers
             {

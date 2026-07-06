@@ -3,7 +3,7 @@
 Generated from code in `src/handlers/**` (not from docs).
 
 - Level: High-Level
-- Total tools: 113
+- Total tools: 134
 
 ## Navigation
 
@@ -31,10 +31,14 @@ Generated from code in `src/handlers/**` (not from docs).
     - [GetLocalTestClass](#getlocaltestclass-high-level-class)
     - [GetLocalTypes](#getlocaltypes-high-level-class)
     - [UpdateClass](#updateclass-high-level-class)
+    - [UpdateClassMethod](#updateclassmethod-high-level-class)
     - [UpdateLocalDefinitions](#updatelocaldefinitions-high-level-class)
     - [UpdateLocalMacros](#updatelocalmacros-high-level-class)
     - [UpdateLocalTestClass](#updatelocaltestclass-high-level-class)
     - [UpdateLocalTypes](#updatelocaltypes-high-level-class)
+  - [Common](#high-level-common)
+    - [ActivateObjects](#activateobjects-high-level-common)
+    - [UpdateSourceByPatch](#updatesourcebypatch-high-level-common)
   - [Compact](#high-level-compact)
     - [HandlerActivate](#handleractivate-high-level-compact)
     - [HandlerCdsUnitTestResult](#handlercdsunittestresult-high-level-compact)
@@ -82,6 +86,16 @@ Generated from code in `src/handlers/**` (not from docs).
   - [Function Module](#high-level-function-module)
     - [DeleteFunctionModule](#deletefunctionmodule-high-level-function-module)
     - [GetFunctionModule](#getfunctionmodule-high-level-function-module)
+  - [Gui Status](#high-level-gui-status)
+    - [CreateGuiStatus](#createguistatus-high-level-gui-status)
+    - [DeleteGuiStatus](#deleteguistatus-high-level-gui-status)
+    - [GetGuiStatus](#getguistatus-high-level-gui-status)
+    - [PatchGuiStatus](#patchguistatus-high-level-gui-status)
+    - [UpdateGuiStatus](#updateguistatus-high-level-gui-status)
+  - [Include](#high-level-include)
+    - [CreateInclude](#createinclude-high-level-include)
+    - [DeleteInclude](#deleteinclude-high-level-include)
+    - [UpdateInclude](#updateinclude-high-level-include)
   - [Interface](#high-level-interface)
     - [CreateInterface](#createinterface-high-level-interface)
     - [DeleteInterface](#deleteinterface-high-level-interface)
@@ -98,6 +112,11 @@ Generated from code in `src/handlers/**` (not from docs).
     - [DeleteProgram](#deleteprogram-high-level-program)
     - [GetProgram](#getprogram-high-level-program)
     - [UpdateProgram](#updateprogram-high-level-program)
+  - [Screen](#high-level-screen)
+    - [CreateScreen](#createscreen-high-level-screen)
+    - [DeleteScreen](#deletescreen-high-level-screen)
+    - [GetScreen](#getscreen-high-level-screen)
+    - [UpdateScreen](#updatescreen-high-level-screen)
   - [Service Binding](#high-level-service-binding)
     - [CreateServiceBinding](#createservicebinding-high-level-service-binding)
     - [DeleteServiceBinding](#deleteservicebinding-high-level-service-binding)
@@ -122,6 +141,13 @@ Generated from code in `src/handlers/**` (not from docs).
     - [DeleteTable](#deletetable-high-level-table)
     - [GetTable](#gettable-high-level-table)
     - [UpdateTable](#updatetable-high-level-table)
+  - [Text Element](#high-level-text-element)
+    - [CreateTextElement](#createtextelement-high-level-text-element)
+    - [DeleteTextElement](#deletetextelement-high-level-text-element)
+    - [GetTextElement](#gettextelement-high-level-text-element)
+    - [ReadTextElementsBulk](#readtextelementsbulk-high-level-text-element)
+    - [UpdateTextElement](#updatetextelement-high-level-text-element)
+    - [WriteTextElementsBulk](#writetextelementsbulk-high-level-text-element)
   - [Transport](#high-level-transport)
     - [CreateTransport](#createtransport-high-level-transport)
   - [Unit Test](#high-level-unit-test)
@@ -154,7 +180,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="createbehaviordefinition-high-level-behavior-definition"></a>
 #### CreateBehaviorDefinition (High-Level / Behavior Definition)
-**Description:** Create a new ABAP Behavior Definition (BDEF) in SAP system.
+**Description:** Create a new ABAP Behavior Definition (BDEF) in SAP system. Defines RAP business object behavior: CRUD operations, validations, determinations, actions, and draft handling.
 
 **Source:** `src/handlers/behavior_definition/high/handleCreateBehaviorDefinition.ts`
 
@@ -195,7 +221,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="updatebehaviordefinition-high-level-behavior-definition"></a>
 #### UpdateBehaviorDefinition (High-Level / Behavior Definition)
-**Description:** Update source code of an ABAP Behavior Definition.
+**Description:** Update source code of an ABAP Behavior Definition (BDEF). Modifies RAP business object behavior: CRUD operations, validations, determinations, actions, and draft handling.
 
 **Source:** `src/handlers/behavior_definition/high/handleUpdateBehaviorDefinition.ts`
 
@@ -352,13 +378,15 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="getclass-high-level-class"></a>
 #### GetClass (High-Level / Class)
-**Description:** Retrieve ABAP class source code. Supports reading active or inactive version.
+**Description:** Retrieve ABAP class source code. Supports reading active or inactive version. Optionally append a compressed dependency context (public signatures of referenced classes/interfaces) via with_context.
 
 **Source:** `src/handlers/class/high/handleGetClass.ts`
 
 **Parameters:**
 - `class_name` (string, required) - Class name (e.g., ZCL_MY_CLASS).
+- `context_max_deps` (number, optional (default: 10)) - Max number of dependencies to resolve when with_context is true (1-15). Default 10.
 - `version` (string, optional (default: active)) - Version to read: 
+- `with_context` (boolean, optional (default: false)) - If true, append a 
 
 ---
 
@@ -424,6 +452,21 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
+<a id="updateclassmethod-high-level-class"></a>
+#### UpdateClassMethod (High-Level / Class)
+**Description:** Update a single method implementation (METHOD...ENDMETHOD block) of an existing ABAP class without sending the entire class source. Splices the replacement into the current class source, then locks, syntax-checks the full reconstructed class, updates, unlocks, and optionally activates — a broken method never lands.
+
+**Source:** `src/handlers/class/high/handleUpdateClassMethod.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate after update. Default: false.
+- `class_name` (string, required) - Class name (e.g., ZCL_MY_CLASS).
+- `method_name` (string, required) - Method name to replace (e.g. 
+- `source` (string, required) - Full replacement method block. Must start with 
+- `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable packages.
+
+---
+
 <a id="updatelocaldefinitions-high-level-class"></a>
 #### UpdateLocalDefinitions (High-Level / Class)
 **Description:** Update local definitions in an ABAP class (definitions include). Manages lock, check, update, unlock, and optional activation.
@@ -477,6 +520,40 @@ Generated from code in `src/handlers/**` (not from docs).
 - `class_name` (string, required) - Parent class name (e.g., ZCL_MY_CLASS).
 - `local_types_code` (string, required) - Updated source code for local types.
 - `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="high-level-common"></a>
+### High-Level / Common
+
+<a id="activateobjects-high-level-common"></a>
+#### ActivateObjects (High-Level / Common)
+**Description:** [high-level] Activate a set of ABAP objects in a single call. Uses the ADT mass-activation endpoint (/sap/bc/adt/activation/runs) so cyclic references between siblings (e.g. main program + multiple cross-referencing includes) resolve in one compilation scope. Returns per-object status, errors, warnings. Falls back to /sap/bc/adt/activation on legacy systems.
+
+**Source:** `src/handlers/common/high/handleActivateObjects.ts`
+
+**Parameters:**
+- `objects` (array, required) - Objects to activate in one batch. Supply either explicit uri, or name+type (and parent_name for FUGR/FF, FUGR/I).
+- `preaudit` (boolean, optional) - Request pre-audit before activation. Default true.
+- `run_timeout_ms` (number, optional) - Max time to wait for the activation run to finish (runs endpoint only). Default 120000.
+
+---
+
+<a id="updatesourcebypatch-high-level-common"></a>
+#### UpdateSourceByPatch (High-Level / Common)
+**Description:** Modify existing ABAP source code on SAP via a surgical string replacement (find old_string, replace with new_string) instead of resending the full source. 
+
+**Source:** `src/handlers/common/high/handleUpdateSourceByPatch.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate the object after the patched source is written. Default: false.
+- `function_group` (string, optional) - Function group name. Required when object_type is 
+- `new_string` (string, required) - Replacement text.
+- `object_name` (string, required) - Name of the object to patch (e.g., ZCL_MY_CLASS).
+- `object_type` (string, required) - ABAP object kind to patch: CLAS (class), PROG (program), INTF (interface), INCL (include), FUNC (function module).
+- `old_string` (string, required) - Exact text to find in the current source (whitespace-sensitive). Must match exactly once unless replace_all is true.
+- `replace_all` (boolean, optional) - Replace every occurrence of old_string instead of requiring a unique match. Default: false.
+- `transport_request` (string, optional) - Transport request number, passed through to the delegated update handler.
 
 ---
 
@@ -965,7 +1042,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="createmetadataextension-high-level-ddlx"></a>
 #### CreateMetadataExtension (High-Level / Ddlx)
-**Description:** Create a new ABAP Metadata Extension (DDLX) in SAP system.
+**Description:** Create a new ABAP Metadata Extension (DDLX) in SAP system. Defines Fiori UI annotations, field labels, search help, and list/object page layout for CDS views.
 
 **Source:** `src/handlers/ddlx/high/handleCreateMetadataExtension.ts`
 
@@ -980,7 +1057,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="updatemetadataextension-high-level-ddlx"></a>
 #### UpdateMetadataExtension (High-Level / Ddlx)
-**Description:** Update source code of an ABAP Metadata Extension.
+**Description:** Update source code of an ABAP Metadata Extension (DDLX). Modifies Fiori UI annotations, field labels, search help, and list/object page layout for CDS views.
 
 **Source:** `src/handlers/ddlx/high/handleUpdateMetadataExtension.ts`
 
@@ -1122,7 +1199,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `function_group_name` (string, required) - Function group name containing the function module (e.g., ZOK_FG_MCP01).
 - `function_module_name` (string, required) - Function module name (e.g., Z_TEST_FM_MCP01). Function module must already exist.
 - `source_code` (string, required) - Complete ABAP function module source code. Must include FUNCTION statement with parameters and ENDFUNCTION. Example:\n\nFUNCTION Z_TEST_FM\n  IMPORTING\n    VALUE(iv_input) TYPE string\n  EXPORTING\n    VALUE(ev_output) TYPE string.\n  \n  ev_output = iv_input.\nENDFUNCTION.
-- `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable function modules.
+- `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable function modules. For local objects ($TMP package) this can be omitted — the handler defaults to 
 
 ---
 
@@ -1182,6 +1259,131 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
+<a id="high-level-gui-status"></a>
+### High-Level / Gui Status
+
+<a id="createguistatus-high-level-gui-status"></a>
+#### CreateGuiStatus (High-Level / Gui Status)
+**Description:** Create a new ABAP GUI Status on an existing program. Optionally activates after creation.
+
+**Source:** `src/handlers/gui_status/high/handleCreateGuiStatus.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate after creation. Default: false.
+- `description` (string, optional) - GUI Status description.
+- `program_name` (string, required) - Parent program name (e.g., Z_MY_PROGRAM).
+- `status_name` (string, required) - GUI Status name to create (e.g., MAIN_STATUS).
+- `status_type` (string, optional) - Status type: 
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="deleteguistatus-high-level-gui-status"></a>
+#### DeleteGuiStatus (High-Level / Gui Status)
+**Description:** Delete an ABAP GUI Status from a program. Handles lock/unlock automatically.
+
+**Source:** `src/handlers/gui_status/high/handleDeleteGuiStatus.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name.
+- `status_name` (string, required) - GUI Status name to delete.
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="getguistatus-high-level-gui-status"></a>
+#### GetGuiStatus (High-Level / Gui Status)
+**Description:** Get ABAP GUI Status definition including statuses, function codes, menus, toolbars, and titles.
+
+**Source:** `src/handlers/gui_status/high/handleGetGuiStatus.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name (e.g., SAPMV45A).
+- `status_name` (string, optional) - Optional: filter to a specific GUI Status name. If omitted, returns all statuses.
+
+---
+
+<a id="patchguistatus-high-level-gui-status"></a>
+#### PatchGuiStatus (High-Level / Gui Status)
+**Description:** Row-level merge into an existing ABAP GUI Status definition. Fetches current CUA → merges the caller-supplied changes (by natural key) → writes merged result back. Rows / fields you omit are preserved. Safer default for targeted edits; use UpdateGuiStatus only when you truly want to replace the whole CUA.\n\nMerge keys per table:\n  STA=CODE, FUN=CODE, PFK=CODE+PFNO, BUT=PFK_CODE+CODE+NO, TIT=CODE,\n  MEN=CODE+NO, MTX=CODE, ACT=CODE+NO, SET=STATUS+FUNCTION,\n  DOC=OBJ_TYPE+OBJ_CODE, BIV=CODE+POS.
+
+**Source:** `src/handlers/gui_status/high/handlePatchGuiStatus.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate after patch. Default: false.
+- `changes` (string, required) - Partial CUA data to merge into the current definition. Same shape as cua_data (ADM / STA / FUN / MEN / MTX / ACT / BUT / PFK / SET / DOC / TIT / BIV). Accepts JSON string or object. Rows matched by natural key are field-merged (changes win). New rows are appended. Omitted tables are left untouched.
+- `program_name` (string, required) - Parent program name.
+- `skip_validation` (boolean, optional) - Skip client-side validation of the merged result. Default: false.
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="updateguistatus-high-level-gui-status"></a>
+#### UpdateGuiStatus (High-Level / Gui Status)
+**Description:** ⚠️ FULL REPLACE — overwrites the entire GUI Status definition (all 12 CUA tables) for the program. Any row or field you omit is DROPPED. Always Read (ReadGuiStatus) → modify → Update, or use PatchGuiStatus for row-level merges. cua_data must include complete STA / FUN / PFK / BUT / TIT rows with all required fields (CODE, PFNO, FUNCODE, ...). Handles lock/unlock automatically.
+
+**Source:** `src/handlers/gui_status/high/handleUpdateGuiStatus.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate after update. Default: false.
+- `cua_data` (string, required) - Complete CUA data — accepts either a JSON string or a structured object with ADM / STA / FUN / MEN / MTX / ACT / BUT / PFK / SET / DOC / TIT / BIV. Required row fields: STA.CODE, FUN.CODE, PFK.{CODE,PFNO,FUNCODE}, BUT.{PFK_CODE,CODE,NO,PFNO}, TIT.CODE. Missing rows are dropped — this is full-replace semantics.
+- `program_name` (string, required) - Parent program name.
+- `skip_validation` (boolean, optional) - Skip client-side schema validation. Default: false. Only set true if you know the CUA payload is intentionally partial and SAP will accept it.
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="high-level-include"></a>
+### High-Level / Include
+
+<a id="createinclude-high-level-include"></a>
+#### CreateInclude (High-Level / Include)
+**Description:** Create a new ABAP Include program (Type I, PROG/I) in SAP system. Creates the include object and registers it under the main program in D010INC. By default also auto-inserts an `INCLUDE <name>.` statement into the main program source so the include is actually used. Use UpdateInclude to set source code afterwards. Unlike CreateProgram with program_type=include (which creates PROG/P), this creates a proper PROG/I include. For mass-activation scenarios (many cross-referencing includes) pass source_code inline, set activate_main_program=false and skip_program_tree_check=true, then call ActivateObjects once with the full set.
+
+**Source:** `src/handlers/include/high/handleCreateInclude.ts`
+
+**Parameters:**
+- `activate_main_program` (boolean, optional) - When inserting INCLUDE statement into the main program, also activate the main program afterwards. Default: true (existing behavior). Set false when batching many includes so that activation is deferred to a single ActivateObjects call.
+- `description` (string, optional) - Include description (max 60 chars). If not provided, include_name will be used.
+- `include_name` (string, required) - Include program name (e.g., ZPAEK_TEST_INC01). Must follow SAP naming conventions (start with Z or Y).
+- `insert_into_main` (boolean, optional) - Auto-insert `INCLUDE <name>.` statement into the main program source. Default: true. Set false to skip main-program modification.
+- `main_program` (string, required) - Name of the main/master program that will contain this include (e.g., ZPAEK_TEST003). Required for proper include registration and activation.
+- `package_name` (string, required) - Package name (e.g., ZOK_LAB, $TMP for local objects).
+- `skip_program_tree_check` (boolean, optional) - Skip the post-create program-tree syntax check. Default: false (existing behavior). Set true when batching many cross-referencing includes — an intermediate include in a cycle will necessarily fail the tree check while its siblings are still missing.
+- `source_code` (string, optional) - Optional include body. When provided, the handler also locks, writes the source, and unlocks the new include in a single call. Never activates — caller must run a separate activation (ActivateObjects for batch scenarios).
+- `transport_request` (string, optional) - Transport request number (e.g., S4HK904224). Required for transportable packages. Optional for local ($TMP) objects.
+
+---
+
+<a id="deleteinclude-high-level-include"></a>
+#### DeleteInclude (High-Level / Include)
+**Description:** Delete an existing ABAP Include program (Type I) from the SAP system via ADT API. If the include is referenced by a main program, provide main_program so the handler can first remove the `INCLUDE <name>.` line from the main program source before deleting.
+
+**Source:** `src/handlers/include/high/handleDeleteInclude.ts`
+
+**Parameters:**
+- `include_name` (string, required) - Include program name to delete.
+- `main_program` (string, optional) - Optional. Name of the main program referencing this include. If provided, the `INCLUDE <name>.` line is removed from the main program source first (so the include is no longer referenced and delete succeeds).
+- `remove_from_main` (boolean, optional) - Auto-remove `INCLUDE <name>.` line from main program source. Default: true when main_program is provided. Set false to skip the main-program modification.
+- `transport_request` (string, optional) - Transport request number. Required for transportable packages. Optional for local ($TMP) objects. Also used for updating the main program if main_program is provided.
+
+---
+
+<a id="updateinclude-high-level-include"></a>
+#### UpdateInclude (High-Level / Include)
+**Description:** Update source code of an existing ABAP Include program (Type I). Locks the include, uploads new source code, and unlocks. Optionally activates after update. Use this instead of UpdateProgram for Type I include programs.
+
+**Source:** `src/handlers/include/high/handleUpdateInclude.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate include after source update. Default: false. Set to true to activate immediately.
+- `include_name` (string, required) - Include program name. Must already exist as Type I include in SAP.
+- `main_program` (string, optional) - Name of the parent/master program that contains this include. When provided, a program-wide syntax check is run after the source is uploaded to catch ABAP errors in the new include code. Highly recommended.
+- `source_code` (string, required) - Complete ABAP include source code. Do NOT include a REPORT statement — include programs start directly with code or comments.
+- `transport_request` (string, optional) - Transport request number. Required for transportable packages.
+
+---
+
 <a id="high-level-interface"></a>
 ### High-Level / Interface
 
@@ -1213,13 +1415,15 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="getinterface-high-level-interface"></a>
 #### GetInterface (High-Level / Interface)
-**Description:** Retrieve ABAP interface definition. Supports reading active or inactive version.
+**Description:** Retrieve ABAP interface definition. Supports reading active or inactive version. Optionally append a compressed dependency context (public signatures of referenced classes/interfaces) via with_context.
 
 **Source:** `src/handlers/interface/high/handleGetInterface.ts`
 
 **Parameters:**
+- `context_max_deps` (number, optional (default: 10)) - Max number of dependencies to resolve when with_context is true (1-15). Default 10.
 - `interface_name` (string, required) - Interface name (e.g., Z_MY_INTERFACE).
 - `version` (string, optional (default: active)) - Version to read: 
+- `with_context` (boolean, optional (default: false)) - If true, append a 
 
 ---
 
@@ -1323,13 +1527,15 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="getprogram-high-level-program"></a>
 #### GetProgram (High-Level / Program)
-**Description:** Retrieve ABAP program definition. Supports reading active or inactive version.
+**Description:** Retrieve ABAP program definition. Supports reading active or inactive version. Optionally append a compressed dependency context (public signatures of referenced classes/interfaces) via with_context.
 
 **Source:** `src/handlers/program/high/handleGetProgram.ts`
 
 **Parameters:**
+- `context_max_deps` (number, optional (default: 10)) - Max number of dependencies to resolve when with_context is true (1-15). Default 10.
 - `program_name` (string, required) - Program name (e.g., Z_MY_PROGRAM).
 - `version` (string, optional (default: active)) - Version to read: 
+- `with_context` (boolean, optional (default: false)) - If true, append a 
 
 ---
 
@@ -1344,6 +1550,65 @@ Generated from code in `src/handlers/**` (not from docs).
 - `program_name` (string, required) - Program name (e.g., Z_TEST_PROGRAM_001). Program must already exist.
 - `source_code` (string, required) - Complete ABAP program source code.
 - `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable packages.
+
+---
+
+<a id="high-level-screen"></a>
+### High-Level / Screen
+
+<a id="createscreen-high-level-screen"></a>
+#### CreateScreen (High-Level / Screen)
+**Description:** Create a new ABAP Screen (Dynpro) on an existing program. Optionally activates.
+
+**Source:** `src/handlers/screen/high/handleCreateScreen.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate after creation. Default: false.
+- `description` (string, optional) - Screen description.
+- `dynpro_data` (string, optional) - Full screen definition as JSON. If omitted, creates minimal screen.
+- `program_name` (string, required) - Parent program name.
+- `screen_number` (string, required) - Screen number to create (e.g., 0100).
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="deletescreen-high-level-screen"></a>
+#### DeleteScreen (High-Level / Screen)
+**Description:** Delete an ABAP Screen (Dynpro) from a program. Handles lock/unlock automatically.
+
+**Source:** `src/handlers/screen/high/handleDeleteScreen.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name.
+- `screen_number` (string, required) - Screen number to delete.
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="getscreen-high-level-screen"></a>
+#### GetScreen (High-Level / Screen)
+**Description:** Get ABAP Screen (Dynpro) definition including metadata, fields, and flow logic source code.
+
+**Source:** `src/handlers/screen/high/handleGetScreen.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name (e.g., SAPMV45A).
+- `screen_number` (string, required) - Screen number (e.g., 0100).
+
+---
+
+<a id="updatescreen-high-level-screen"></a>
+#### UpdateScreen (High-Level / Screen)
+**Description:** Update an ABAP Screen (Dynpro) definition. Provide full screen data as JSON. Handles lock/unlock automatically.
+
+**Source:** `src/handlers/screen/high/handleUpdateScreen.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate after update. Default: false.
+- `dynpro_data` (string, required) - Complete screen definition as JSON (from GetScreen/ReadScreen).
+- `program_name` (string, required) - Parent program name.
+- `screen_number` (string, required) - Screen number (e.g., 0100).
+- `transport_request` (string, optional) - Transport request number.
 
 ---
 
@@ -1620,9 +1885,104 @@ Generated from code in `src/handlers/**` (not from docs).
 
 **Parameters:**
 - `activate` (boolean, optional) - Activate table after source update. Default: true.
-- `ddl_code` (string, required) - Complete DDL source code for table. Example: 
+- `ddl_code` (string, required) - Complete DDL source code for a TRANSPARENT TABLE. IMPORTANT — use the MANDT data element for the client key (
 - `table_name` (string, required) - Table name (e.g., ZZ_TEST_TABLE_001). Table must already exist.
 - `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Optional if object is local or already in transport.
+
+---
+
+<a id="high-level-text-element"></a>
+### High-Level / Text Element
+
+<a id="createtextelement-high-level-text-element"></a>
+#### CreateTextElement (High-Level / Text Element)
+**Description:** Add a text element (text symbol, selection text, program title, or list heading) to an ABAP program. Optionally activates after write.
+
+**Source:** `src/handlers/text_element/high/handleCreateTextElement.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate the parent program after write. Default: false.
+- `key` (string, optional) - Row key. For 
+- `language` (string, optional) - Language key (1-char). Defaults to SAP logon language.
+- `program_name` (string, required) - Parent program name (e.g., Z_MY_PROGRAM).
+- `text` (string, required) - 
+- `text_type` (string, required) - 
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="deletetextelement-high-level-text-element"></a>
+#### DeleteTextElement (High-Level / Text Element)
+**Description:** Delete a text element from an ABAP program text pool. key=
+
+**Source:** `src/handlers/text_element/high/handleDeleteTextElement.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate the parent program after write. Default: false.
+- `key` (string, optional) - Row key, or 
+- `language` (string, optional) - Language key. Defaults to SAP logon language.
+- `program_name` (string, required) - Parent program name.
+- `text_type` (string, required) - 
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="gettextelement-high-level-text-element"></a>
+#### GetTextElement (High-Level / Text Element)
+**Description:** Read ABAP program text pool (text symbols, selection texts, title, headings). Optionally filter by text_type / key.
+
+**Source:** `src/handlers/text_element/high/handleGetTextElement.ts`
+
+**Parameters:**
+- `key` (string, optional) - Optional: filter by row key (e.g., 
+- `language` (string, optional) - Language key (1-char, e.g., 
+- `program_name` (string, required) - Program name (e.g., Z_MY_PROGRAM).
+- `text_type` (string, optional) - Filter by ID: 
+
+---
+
+<a id="readtextelementsbulk-high-level-text-element"></a>
+#### ReadTextElementsBulk (High-Level / Text Element)
+**Description:** Read every text element (R/I/S/H) of a program in ONE call via the TPOOL RFC. Partitions rows by type and returns structured arrays. Use this instead of calling GetTextElement per row.
+
+**Source:** `src/handlers/text_element/high/handleReadTextElementsBulk.ts`
+
+**Parameters:**
+- `language` (string, optional) - 1-char language. Defaults to SAP logon language.
+- `program_name` (string, required) - Program name.
+
+---
+
+<a id="updatetextelement-high-level-text-element"></a>
+#### UpdateTextElement (High-Level / Text Element)
+**Description:** Update an existing text element in an ABAP program text pool. Handles lock/unlock automatically.
+
+**Source:** `src/handlers/text_element/high/handleUpdateTextElement.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - Activate the parent program after write. Default: false.
+- `key` (string, optional) - Row key. Required except for 
+- `language` (string, optional) - Language key. Defaults to SAP logon language.
+- `program_name` (string, required) - Parent program name.
+- `text` (string, required) - 
+- `text_type` (string, required) - 
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="writetextelementsbulk-high-level-text-element"></a>
+#### WriteTextElementsBulk (High-Level / Text Element)
+**Description:** Register many ABAP text elements (R/I/S/H) in ONE tool call via a single TPOOL RFC write. Use instead of calling CreateTextElement N times. With activate=false (default) the pool is staged INACTIVE — the parent program\
+
+**Source:** `src/handlers/text_element/high/handleWriteTextElementsBulk.ts`
+
+**Parameters:**
+- `activate` (boolean, optional) - false (default) — stage as INACTIVE (program activation promotes). true — write ACTIVE immediately.
+- `language` (string, optional) - 1-char language key (e.g. 
+- `program_name` (string, required) - Parent program name.
+- `replace_existing` (boolean, optional) - If true (default), the TPOOL is replaced with the provided entries only. If false, existing rows are preserved and provided rows merge by (type, key).
+- `text_elements` (array, required) - Array of entries. Each: { type: 
+- `transport_request` (string, optional) - Transport request number (informational).
 
 ---
 
@@ -1867,4 +2227,4 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
-*Last updated: 2026-03-14*
+*Last updated: 2026-07-06*

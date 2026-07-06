@@ -11,9 +11,17 @@ import {
   TOOL_DEFINITION as ReadBehaviorImplementation_Tool,
 } from '../../../handlers/behavior_implementation/readonly/handleReadBehaviorImplementation';
 import {
+  TOOL_DEFINITION as GetClassMethod_Tool,
+  handleGetClassMethod,
+} from '../../../handlers/class/readonly/handleGetClassMethod';
+import {
   handleReadClass,
   TOOL_DEFINITION as ReadClass_Tool,
 } from '../../../handlers/class/readonly/handleReadClass';
+import {
+  TOOL_DEFINITION as GetSourceDiff_Tool,
+  handleGetSourceDiff,
+} from '../../../handlers/common/readonly/handleGetSourceDiff';
 import {
   handleReadDataElement,
   TOOL_DEFINITION as ReadDataElement_Tool,
@@ -198,6 +206,14 @@ export class ReadOnlyHandlersGroup extends BaseHandlerGroup {
       {
         toolDefinition: ReadClass_Tool,
         handler: (args: any) => handleReadClass(this.context, args),
+      },
+      {
+        toolDefinition: GetClassMethod_Tool,
+        handler: (args: any) => handleGetClassMethod(this.context, args),
+      },
+      {
+        toolDefinition: GetSourceDiff_Tool,
+        handler: (args: any) => handleGetSourceDiff(this.context, args),
       },
       {
         toolDefinition: ReadInterface_Tool,

@@ -79,6 +79,10 @@ import {
   TOOL_DEFINITION as UpdateClassHigh_Tool,
 } from '../../../handlers/class/high/handleUpdateClass';
 import {
+  handleUpdateClassMethod,
+  TOOL_DEFINITION as UpdateClassMethod_Tool,
+} from '../../../handlers/class/high/handleUpdateClassMethod';
+import {
   handleUpdateLocalDefinitions,
   TOOL_DEFINITION as UpdateLocalDefinitions_Tool,
 } from '../../../handlers/class/high/handleUpdateLocalDefinitions';
@@ -98,6 +102,10 @@ import {
   TOOL_DEFINITION as ActivateObjects_Tool,
   handleActivateObjects,
 } from '../../../handlers/common/high/handleActivateObjects';
+import {
+  handleUpdateSourceByPatch,
+  TOOL_DEFINITION as UpdateSourceByPatch_Tool,
+} from '../../../handlers/common/high/handleUpdateSourceByPatch';
 import {
   TOOL_DEFINITION as CreateDataElement_Tool,
   handleCreateDataElement,
@@ -603,6 +611,14 @@ export class HighLevelHandlersGroup extends BaseHandlerGroup {
       {
         toolDefinition: UpdateClassHigh_Tool,
         handler: withContext(handleUpdateClassHigh),
+      },
+      {
+        toolDefinition: UpdateClassMethod_Tool,
+        handler: withContext(handleUpdateClassMethod),
+      },
+      {
+        toolDefinition: UpdateSourceByPatch_Tool,
+        handler: withContext(handleUpdateSourceByPatch),
       },
       {
         toolDefinition: DeleteClass_Tool,

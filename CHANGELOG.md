@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [4.10.0] - 2026-07-06
+
+vsp ([vibing-steampunk](https://github.com/oisee/vibing-steampunk)) feature adoption — token-efficiency and code-intelligence tools.
+
+### Added
+- `UpdateSourceByPatch` — surgical old_string/new_string patch edit for CLAS/PROG/INTF/INCL/FUNC; uniqueness-validated, delegates to the existing Update* flows (lock → syntax check → update → unlock → optional activate) so a broken patch never lands.
+- `GetClassMethod` / `UpdateClassMethod` — method-level read/edit for classes (~95% token reduction vs full-class round-trips); splices a single METHOD block and revalidates the whole class before writing.
+- `CheckSyntax` — standalone read-only syntax check (proposed source for CLAS/PROG/INTF; current inactive version for INCL/FUNC).
+- `GetSourceDiff` — client-side unified diff between two ABAP objects (CLAS/PROG/INTF/INCL), dependency-free LCS implementation.
+- `GrepObjects` / `GrepPackages` — regex source search across explicit object lists / package hierarchies (subpackage recursion, context lines, type filter, global max_results cap with early fetch stop). FUNC excluded structurally (package listings carry no parent function group).
+- `GetSystemInfo` / `GetInstalledComponents` — system identity (SID/client/modern-vs-legacy stack hint) and software component list; degrade to `supported:false` instead of erroring on releases without the endpoints.
+- `GetClass` / `GetInterface` / `GetProgram`: opt-in `with_context` + `context_max_deps` — appends a `dependency_context` JSON field with compressed public contracts (public section / interface / FM signature) of referenced objects, 7–30x smaller than fetching full dependency sources.
+
+### Notes
+- All new write tools follow the `Update*` prefix so sc4sap QA/Prod prefix guards cover them; everything else is read-only.
+- MCP `tools/list` (default exposition): 144 → 153 tools.
+
 ## [4.9.1] - 2026-07-06
 
 Codex review follow-ups on the 4.9.0 bundle distribution.

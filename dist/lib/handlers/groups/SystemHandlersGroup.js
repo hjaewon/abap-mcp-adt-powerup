@@ -5,6 +5,7 @@ const handleGetPackageTree_1 = require("../../../handlers/system/high/handleGetP
 const handleGetNodeStructure_1 = require("../../../handlers/system/low/handleGetNodeStructure");
 const handleGetObjectStructure_1 = require("../../../handlers/system/low/handleGetObjectStructure");
 const handleGetVirtualFolders_1 = require("../../../handlers/system/low/handleGetVirtualFolders");
+const handleCheckSyntax_1 = require("../../../handlers/system/readonly/handleCheckSyntax");
 const handleDescribeByList_1 = require("../../../handlers/system/readonly/handleDescribeByList");
 const handleDescribeByList_js_1 = require("../../../handlers/system/readonly/handleDescribeByList.js");
 const handleGetAbapAST_1 = require("../../../handlers/system/readonly/handleGetAbapAST");
@@ -12,6 +13,7 @@ const handleGetAbapSemanticAnalysis_1 = require("../../../handlers/system/readon
 const handleGetAbapSystemSymbols_1 = require("../../../handlers/system/readonly/handleGetAbapSystemSymbols");
 const handleGetAllTypes_1 = require("../../../handlers/system/readonly/handleGetAllTypes");
 const handleGetInactiveObjects_1 = require("../../../handlers/system/readonly/handleGetInactiveObjects");
+const handleGetInstalledComponents_1 = require("../../../handlers/system/readonly/handleGetInstalledComponents");
 const handleGetObjectInfo_1 = require("../../../handlers/system/readonly/handleGetObjectInfo");
 const handleGetObjectNodeFromCache_1 = require("../../../handlers/system/readonly/handleGetObjectNodeFromCache");
 const handleGetObjectNodeFromCache_js_1 = require("../../../handlers/system/readonly/handleGetObjectNodeFromCache.js");
@@ -19,6 +21,7 @@ const handleGetObjectStructure_2 = require("../../../handlers/system/readonly/ha
 const handleGetObjectStructure_js_1 = require("../../../handlers/system/readonly/handleGetObjectStructure.js");
 const handleGetSession_1 = require("../../../handlers/system/readonly/handleGetSession");
 const handleGetSqlQuery_1 = require("../../../handlers/system/readonly/handleGetSqlQuery");
+const handleGetSystemInfo_1 = require("../../../handlers/system/readonly/handleGetSystemInfo");
 const handleGetTransaction_1 = require("../../../handlers/system/readonly/handleGetTransaction");
 // Import system handlers
 // Import TOOL_DEFINITION from handlers
@@ -137,6 +140,18 @@ class SystemHandlersGroup extends BaseHandlerGroup_js_1.BaseHandlerGroup {
             {
                 toolDefinition: handleGetSession_1.TOOL_DEFINITION,
                 handler: (args) => (0, handleGetSession_1.handleGetSession)(this.context, args),
+            },
+            {
+                toolDefinition: handleCheckSyntax_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleCheckSyntax_1.handleCheckSyntax)(this.context, args),
+            },
+            {
+                toolDefinition: handleGetSystemInfo_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGetSystemInfo_1.handleGetSystemInfo)(this.context, args),
+            },
+            {
+                toolDefinition: handleGetInstalledComponents_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGetInstalledComponents_1.handleGetInstalledComponents)(this.context, args),
             },
             {
                 toolDefinition: handleReloadProfile_1.TOOL_DEFINITION,

@@ -3,7 +3,7 @@
 Generated from code in `src/handlers/**` (not from docs).
 
 - Level: Low-Level
-- Total tools: 122
+- Total tools: 134
 
 ## Navigation
 
@@ -87,6 +87,13 @@ Generated from code in `src/handlers/**` (not from docs).
     - [UpdateFunctionModuleLow](#updatefunctionmodulelow-low-level-function)
     - [ValidateFunctionGroupLow](#validatefunctiongrouplow-low-level-function)
     - [ValidateFunctionModuleLow](#validatefunctionmodulelow-low-level-function)
+  - [Gui Status](#low-level-gui-status)
+    - [ActivateGuiStatusLow](#activateguistatuslow-low-level-gui-status)
+    - [CreateGuiStatusLow](#createguistatuslow-low-level-gui-status)
+    - [DeleteGuiStatusLow](#deleteguistatuslow-low-level-gui-status)
+    - [LockGuiStatusLow](#lockguistatuslow-low-level-gui-status)
+    - [UnlockGuiStatusLow](#unlockguistatuslow-low-level-gui-status)
+    - [UpdateGuiStatusLow](#updateguistatuslow-low-level-gui-status)
   - [Interface](#low-level-interface)
     - [ActivateInterfaceLow](#activateinterfacelow-low-level-interface)
     - [CheckInterfaceLow](#checkinterfacelow-low-level-interface)
@@ -113,6 +120,13 @@ Generated from code in `src/handlers/**` (not from docs).
     - [UnlockProgramLow](#unlockprogramlow-low-level-program)
     - [UpdateProgramLow](#updateprogramlow-low-level-program)
     - [ValidateProgramLow](#validateprogramlow-low-level-program)
+  - [Screen](#low-level-screen)
+    - [ActivateScreenLow](#activatescreenlow-low-level-screen)
+    - [CreateScreenLow](#createscreenlow-low-level-screen)
+    - [DeleteScreenLow](#deletescreenlow-low-level-screen)
+    - [LockScreenLow](#lockscreenlow-low-level-screen)
+    - [UnlockScreenLow](#unlockscreenlow-low-level-screen)
+    - [UpdateScreenLow](#updatescreenlow-low-level-screen)
   - [Structure](#low-level-structure)
     - [ActivateStructureLow](#activatestructurelow-low-level-structure)
     - [CheckStructureLow](#checkstructurelow-low-level-structure)
@@ -249,6 +263,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `name` (string, required) - Behavior definition name (e.g., ZOK_C_TEST_0001). Behavior definition must already exist.
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip post-write syntax check. Default: false. When false, runs a syntax check on the staged inactive version after update and surfaces any errors with line numbers.
 - `source_code` (string, required) - Complete behavior definition source code.
 - `transport_request` (string, optional) - Transport request number (required for transportable packages).
 
@@ -381,6 +396,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `package_name` (string, required) - Package name (e.g., ZOK_LOCAL, $TMP for local objects).
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip post-create syntax check. Default: false. When false, runs a syntax check on the newly created class shell and surfaces any errors with line numbers.
 - `superclass` (string, optional) - Superclass name (optional).
 - `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable packages.
 
@@ -504,6 +520,7 @@ Generated from code in `src/handlers/**` (not from docs).
 **Parameters:**
 - `class_name` (string, required) - Class name (e.g., ZCL_TEST_CLASS_001). Class must already exist.
 - `lock_handle` (string, required) - Lock handle from LockClass operation. Required for update operation.
+- `skip_check` (boolean, optional) - Skip pre-write syntax check on source_code. Default: false. When false, runs a syntax check on the proposed code BEFORE uploading it and surfaces any errors with line numbers — the broken source never lands on SAP.
 - `source_code` (string, required) - Complete ABAP class source code including CLASS DEFINITION and IMPLEMENTATION sections.
 
 ---
@@ -519,6 +536,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `lock_handle` (string, required) - Test classes lock handle from LockClassTestClassesLow.
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip post-write syntax check. Default: false. When false, runs a syntax check on the parent class after updating the test-classes include and surfaces any errors with line numbers.
 - `test_class_source` (string, required) - Complete ABAP Unit test class source code.
 
 ---
@@ -793,6 +811,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `package_name` (string, required) - Package name (e.g., ZOK_LOCAL, $TMP for local objects).
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip post-create syntax check. Default: false. NOTE: SAP
 - `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Optional for local objects.
 
 ---
@@ -847,6 +866,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `name` (string, required) - Metadata extension name (e.g., ZOK_C_TEST_0001). Metadata extension must already exist.
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip post-write syntax check. Default: false. NOTE: SAP
 - `source_code` (string, required) - Complete metadata extension source code.
 
 ---
@@ -1164,6 +1184,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `lock_handle` (string, required) - Lock handle from LockFunctionModule. Required for update operation.
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip post-write syntax check. Default: false. When false, runs a syntax check on the staged inactive version after update and surfaces any errors with line numbers.
 - `source_code` (string, required) - Complete ABAP function module source code.
 - `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable objects locked in a request.
 
@@ -1196,6 +1217,99 @@ Generated from code in `src/handlers/**` (not from docs).
 - `function_module_name` (string, required) - Function module name to validate (e.g., Z_TEST_FM)
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+
+---
+
+<a id="low-level-gui-status"></a>
+### Low-Level / Gui Status
+
+<a id="activateguistatuslow-low-level-gui-status"></a>
+#### ActivateGuiStatusLow (Low-Level / Gui Status)
+**Description:** [low-level] Activate an ABAP program to make GUI Status changes active.
+
+**Source:** `src/handlers/gui_status/low/handleActivateGuiStatus.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name.
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+
+---
+
+<a id="createguistatuslow-low-level-gui-status"></a>
+#### CreateGuiStatusLow (Low-Level / Gui Status)
+**Description:** [low-level] Create a new ABAP GUI Status on an existing program.
+
+**Source:** `src/handlers/gui_status/low/handleCreateGuiStatus.ts`
+
+**Parameters:**
+- `description` (string, optional) - GUI Status description.
+- `program_name` (string, required) - Parent program name (e.g., Z_MY_PROGRAM).
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+- `status_name` (string, required) - GUI Status name to create (e.g., MAIN_STATUS).
+- `status_type` (string, optional) - Status type: 
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="deleteguistatuslow-low-level-gui-status"></a>
+#### DeleteGuiStatusLow (Low-Level / Gui Status)
+**Description:** [low-level] Delete an ABAP GUI Status from a program.
+
+**Source:** `src/handlers/gui_status/low/handleDeleteGuiStatus.ts`
+
+**Parameters:**
+- `lock_handle` (string, required) - Lock handle from LockGuiStatusLow.
+- `program_name` (string, required) - Parent program name.
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+- `status_name` (string, required) - GUI Status name to delete. Use 
+- `transport_request` (string, optional) - Transport request number.
+
+---
+
+<a id="lockguistatuslow-low-level-gui-status"></a>
+#### LockGuiStatusLow (Low-Level / Gui Status)
+**Description:** [low-level] Lock a program for GUI Status modification. Returns lock handle for subsequent update/unlock operations.
+
+**Source:** `src/handlers/gui_status/low/handleLockGuiStatus.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name (e.g., SAPMV45A).
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+- `status_name` (string, optional) - GUI Status name (for reference only).
+
+---
+
+<a id="unlockguistatuslow-low-level-gui-status"></a>
+#### UnlockGuiStatusLow (Low-Level / Gui Status)
+**Description:** [low-level] Unlock a program after GUI Status modification. Requires lock handle from LockGuiStatusLow.
+
+**Source:** `src/handlers/gui_status/low/handleUnlockGuiStatus.ts`
+
+**Parameters:**
+- `lock_handle` (string, required) - Lock handle from LockGuiStatusLow.
+- `program_name` (string, required) - Parent program name.
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+
+---
+
+<a id="updateguistatuslow-low-level-gui-status"></a>
+#### UpdateGuiStatusLow (Low-Level / Gui Status)
+**Description:** [low-level] Update an ABAP GUI Status definition. Provide full CUA data (from ReadGuiStatus) with modifications.
+
+**Source:** `src/handlers/gui_status/low/handleUpdateGuiStatus.ts`
+
+**Parameters:**
+- `cua_data` (string, required) - Complete CUA data as JSON string (from ReadGuiStatus/GetGuiStatus). Modify and pass back.
+- `lock_handle` (string, required) - Lock handle from LockGuiStatusLow.
+- `program_name` (string, required) - Parent program name.
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+- `transport_request` (string, optional) - Transport request number.
 
 ---
 
@@ -1467,6 +1581,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `program_type` (string, optional) - Program type: 
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip the post-create syntax check on the newly created program shell. Default: false. Set to true when chaining multiple low-level calls where the caller will run CheckProgramLow explicitly later.
 - `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable packages.
 
 ---
@@ -1521,6 +1636,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `program_name` (string, required) - Program name (e.g., Z_TEST_PROGRAM). Program must already exist.
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip the pre-write syntax check of the new source. Default: false. Set to true when chaining multiple low-level calls where the caller will run CheckProgramLow explicitly before this update.
 - `source_code` (string, required) - Complete ABAP program source code.
 
 ---
@@ -1537,6 +1653,99 @@ Generated from code in `src/handlers/**` (not from docs).
 - `program_name` (string, required) - Program name to validate (e.g., Z_MY_PROGRAM).
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+
+---
+
+<a id="low-level-screen"></a>
+### Low-Level / Screen
+
+<a id="activatescreenlow-low-level-screen"></a>
+#### ActivateScreenLow (Low-Level / Screen)
+**Description:** [low-level] Activate an ABAP program to make Screen changes active.
+
+**Source:** `src/handlers/screen/low/handleActivateScreen.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name.
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+
+---
+
+<a id="createscreenlow-low-level-screen"></a>
+#### CreateScreenLow (Low-Level / Screen)
+**Description:** [low-level] Create a new ABAP Screen (Dynpro) on an existing program.
+
+**Source:** `src/handlers/screen/low/handleCreateScreen.ts`
+
+**Parameters:**
+- `description` (string, optional) - Screen description.
+- `dynpro_data` (string, optional) - Full screen definition as JSON (header, containers, fields_to_containers, flow_logic). If omitted, creates a minimal empty screen.
+- `program_name` (string, required) - Parent program name.
+- `screen_number` (string, required) - Screen number to create (e.g., 0100).
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+- `skip_check` (boolean, optional) - Skip post-write syntax check. Default: false. When false, runs a program-tree syntax check on the parent program after DYNPRO_INSERT and surfaces any flow-logic errors with line numbers.
+
+---
+
+<a id="deletescreenlow-low-level-screen"></a>
+#### DeleteScreenLow (Low-Level / Screen)
+**Description:** [low-level] Delete an ABAP Screen (Dynpro) from a program.
+
+**Source:** `src/handlers/screen/low/handleDeleteScreen.ts`
+
+**Parameters:**
+- `lock_handle` (string, required) - Lock handle from LockScreenLow.
+- `program_name` (string, required) - Parent program name.
+- `screen_number` (string, required) - Screen number (e.g., 0100).
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+
+---
+
+<a id="lockscreenlow-low-level-screen"></a>
+#### LockScreenLow (Low-Level / Screen)
+**Description:** [low-level] Lock a program for Screen modification. Returns lock handle for subsequent operations.
+
+**Source:** `src/handlers/screen/low/handleLockScreen.ts`
+
+**Parameters:**
+- `program_name` (string, required) - Parent program name.
+- `screen_number` (string, optional) - Screen number (for reference).
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+
+---
+
+<a id="unlockscreenlow-low-level-screen"></a>
+#### UnlockScreenLow (Low-Level / Screen)
+**Description:** [low-level] Unlock a program after Screen modification.
+
+**Source:** `src/handlers/screen/low/handleUnlockScreen.ts`
+
+**Parameters:**
+- `lock_handle` (string, required) - Lock handle from LockScreenLow.
+- `program_name` (string, required) - Parent program name.
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+
+---
+
+<a id="updatescreenlow-low-level-screen"></a>
+#### UpdateScreenLow (Low-Level / Screen)
+**Description:** [low-level] Update an ABAP Screen (Dynpro) definition. Provide full screen data as JSON.
+
+**Source:** `src/handlers/screen/low/handleUpdateScreen.ts`
+
+**Parameters:**
+- `dynpro_data` (string, required) - Complete screen definition as JSON (header, containers, fields_to_containers, flow_logic).
+- `lock_handle` (string, required) - Lock handle from LockScreenLow.
+- `program_name` (string, required) - Parent program name.
+- `screen_number` (string, required) - Screen number (e.g., 0100).
+- `session_id` (string, optional) - Session ID from GetSession.
+- `session_state` (object, optional) - Session state from GetSession.
+- `skip_check` (boolean, optional) - Skip post-write syntax check. Default: false. When false, runs a program-tree syntax check on the parent program after DYNPRO_INSERT and surfaces any flow-logic errors with line numbers.
 
 ---
 
@@ -1881,6 +2090,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `package_name` (string, required) - Package name (e.g., ZOK_LOCAL, $TMP for local objects).
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip post-create syntax check. Default: false. When false, runs a syntax check on the freshly created view shell and surfaces any errors with line numbers.
 - `transport_request` (string, optional) - Transport request number (e.g., E19K905635). Required for transportable packages.
 - `view_name` (string, required) - View name (e.g., Z_TEST_PROGRAM). Must follow SAP naming conventions.
 - `view_type` (string, optional) - View type: 
@@ -1937,6 +2147,7 @@ Generated from code in `src/handlers/**` (not from docs).
 - `lock_handle` (string, required) - Lock handle from LockObject. Required for update operation.
 - `session_id` (string, optional) - Session ID from GetSession. If not provided, a new session will be created.
 - `session_state` (object, optional) - Session state from GetSession (cookies, csrf_token, cookie_store). Required if session_id is provided.
+- `skip_check` (boolean, optional) - Skip pre-write syntax check on ddl_source. Default: false. When false, runs a syntax check on the proposed code BEFORE uploading it and surfaces any errors with line numbers — the broken source never lands on SAP.
 - `view_name` (string, required) - View name (e.g., ZOK_R_TEST_0002). View must already exist.
 
 ---
@@ -1956,4 +2167,4 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
-*Last updated: 2026-03-14*
+*Last updated: 2026-07-06*

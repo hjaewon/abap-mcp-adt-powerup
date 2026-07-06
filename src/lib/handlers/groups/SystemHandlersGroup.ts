@@ -14,6 +14,10 @@ import {
   TOOL_DEFINITION as GetVirtualFoldersLow_Tool,
   handleGetVirtualFolders,
 } from '../../../handlers/system/low/handleGetVirtualFolders';
+import {
+  TOOL_DEFINITION as CheckSyntax_Tool,
+  handleCheckSyntax,
+} from '../../../handlers/system/readonly/handleCheckSyntax';
 import { TOOL_DEFINITION as DescribeByList_Tool } from '../../../handlers/system/readonly/handleDescribeByList';
 import { handleDescribeByList } from '../../../handlers/system/readonly/handleDescribeByList.js';
 import {
@@ -37,6 +41,10 @@ import {
   handleGetInactiveObjects,
 } from '../../../handlers/system/readonly/handleGetInactiveObjects';
 import {
+  TOOL_DEFINITION as GetInstalledComponents_Tool,
+  handleGetInstalledComponents,
+} from '../../../handlers/system/readonly/handleGetInstalledComponents';
+import {
   TOOL_DEFINITION as GetObjectInfo_Tool,
   handleGetObjectInfo,
 } from '../../../handlers/system/readonly/handleGetObjectInfo';
@@ -52,6 +60,10 @@ import {
   TOOL_DEFINITION as GetSqlQuery_Tool,
   handleGetSqlQuery,
 } from '../../../handlers/system/readonly/handleGetSqlQuery';
+import {
+  TOOL_DEFINITION as GetSystemInfo_Tool,
+  handleGetSystemInfo,
+} from '../../../handlers/system/readonly/handleGetSystemInfo';
 import {
   TOOL_DEFINITION as GetTransaction_Tool,
   handleGetTransaction,
@@ -232,6 +244,19 @@ export class SystemHandlersGroup extends BaseHandlerGroup {
       {
         toolDefinition: GetSession_Tool,
         handler: (args: any) => handleGetSession(this.context, args),
+      },
+      {
+        toolDefinition: CheckSyntax_Tool,
+        handler: (args: any) => handleCheckSyntax(this.context, args),
+      },
+      {
+        toolDefinition: GetSystemInfo_Tool,
+        handler: (args: any) => handleGetSystemInfo(this.context, args),
+      },
+      {
+        toolDefinition: GetInstalledComponents_Tool,
+        handler: (args: any) =>
+          handleGetInstalledComponents(this.context, args),
       },
       {
         toolDefinition: ReloadProfile_Tool,

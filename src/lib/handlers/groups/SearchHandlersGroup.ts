@@ -6,6 +6,14 @@ import {
   TOOL_DEFINITION as GetObjectsList_Tool,
   handleGetObjectsList,
 } from '../../../handlers/search/readonly/handleGetObjectsList';
+import {
+  TOOL_DEFINITION as GrepObjects_Tool,
+  handleGrepObjects,
+} from '../../../handlers/search/readonly/handleGrepObjects';
+import {
+  TOOL_DEFINITION as GrepPackages_Tool,
+  handleGrepPackages,
+} from '../../../handlers/search/readonly/handleGrepPackages';
 // Import search handlers
 // Import TOOL_DEFINITION from handlers
 import {
@@ -30,6 +38,14 @@ export class SearchHandlersGroup extends BaseHandlerGroup {
       {
         toolDefinition: SearchObject_Tool,
         handler: (args: any) => handleSearchObject(this.context, args),
+      },
+      {
+        toolDefinition: GrepObjects_Tool,
+        handler: (args: any) => handleGrepObjects(this.context, args),
+      },
+      {
+        toolDefinition: GrepPackages_Tool,
+        handler: (args: any) => handleGrepPackages(this.context, args),
       },
       // Dynamic import handlers
       {

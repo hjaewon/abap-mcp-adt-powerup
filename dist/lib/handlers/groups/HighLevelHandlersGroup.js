@@ -21,11 +21,13 @@ const handleGetLocalMacros_1 = require("../../../handlers/class/high/handleGetLo
 const handleGetLocalTestClass_1 = require("../../../handlers/class/high/handleGetLocalTestClass");
 const handleGetLocalTypes_1 = require("../../../handlers/class/high/handleGetLocalTypes");
 const handleUpdateClass_1 = require("../../../handlers/class/high/handleUpdateClass");
+const handleUpdateClassMethod_1 = require("../../../handlers/class/high/handleUpdateClassMethod");
 const handleUpdateLocalDefinitions_1 = require("../../../handlers/class/high/handleUpdateLocalDefinitions");
 const handleUpdateLocalMacros_1 = require("../../../handlers/class/high/handleUpdateLocalMacros");
 const handleUpdateLocalTestClass_1 = require("../../../handlers/class/high/handleUpdateLocalTestClass");
 const handleUpdateLocalTypes_1 = require("../../../handlers/class/high/handleUpdateLocalTypes");
 const handleActivateObjects_1 = require("../../../handlers/common/high/handleActivateObjects");
+const handleUpdateSourceByPatch_1 = require("../../../handlers/common/high/handleUpdateSourceByPatch");
 const handleCreateDataElement_1 = require("../../../handlers/data_element/high/handleCreateDataElement");
 const handleDeleteDataElement_1 = require("../../../handlers/data_element/high/handleDeleteDataElement");
 const handleGetDataElement_1 = require("../../../handlers/data_element/high/handleGetDataElement");
@@ -273,6 +275,14 @@ class HighLevelHandlersGroup extends BaseHandlerGroup_js_1.BaseHandlerGroup {
             {
                 toolDefinition: handleUpdateClass_1.TOOL_DEFINITION,
                 handler: withContext(handleUpdateClass_1.handleUpdateClass),
+            },
+            {
+                toolDefinition: handleUpdateClassMethod_1.TOOL_DEFINITION,
+                handler: withContext(handleUpdateClassMethod_1.handleUpdateClassMethod),
+            },
+            {
+                toolDefinition: handleUpdateSourceByPatch_1.TOOL_DEFINITION,
+                handler: withContext(handleUpdateSourceByPatch_1.handleUpdateSourceByPatch),
             },
             {
                 toolDefinition: handleDeleteClass_1.TOOL_DEFINITION,

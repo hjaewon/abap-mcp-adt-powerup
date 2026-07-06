@@ -4,7 +4,9 @@ exports.ReadOnlyHandlersGroup = void 0;
 const handleGetAtcFindings_1 = require("../../../handlers/atc/readonly/handleGetAtcFindings");
 const handleReadBehaviorDefinition_1 = require("../../../handlers/behavior_definition/readonly/handleReadBehaviorDefinition");
 const handleReadBehaviorImplementation_1 = require("../../../handlers/behavior_implementation/readonly/handleReadBehaviorImplementation");
+const handleGetClassMethod_1 = require("../../../handlers/class/readonly/handleGetClassMethod");
 const handleReadClass_1 = require("../../../handlers/class/readonly/handleReadClass");
+const handleGetSourceDiff_1 = require("../../../handlers/common/readonly/handleGetSourceDiff");
 const handleReadDataElement_1 = require("../../../handlers/data_element/readonly/handleReadDataElement");
 const handleReadDomain_1 = require("../../../handlers/domain/readonly/handleReadDomain");
 const handleGetBadiImplementations_1 = require("../../../handlers/enhancement/readonly/handleGetBadiImplementations");
@@ -101,6 +103,14 @@ class ReadOnlyHandlersGroup extends BaseHandlerGroup_js_1.BaseHandlerGroup {
             {
                 toolDefinition: handleReadClass_1.TOOL_DEFINITION,
                 handler: (args) => (0, handleReadClass_1.handleReadClass)(this.context, args),
+            },
+            {
+                toolDefinition: handleGetClassMethod_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGetClassMethod_1.handleGetClassMethod)(this.context, args),
+            },
+            {
+                toolDefinition: handleGetSourceDiff_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGetSourceDiff_1.handleGetSourceDiff)(this.context, args),
             },
             {
                 toolDefinition: handleReadInterface_1.TOOL_DEFINITION,
