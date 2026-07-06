@@ -1,44 +1,8 @@
 {
-  "name": "@babamba2/abap-mcp-adt-powerup",
-  "mcpName": "io.github.babamba2/abap-mcp-adt-powerup",
-  "version": "4.8.4",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
-    },
-    "./handlers": {
-      "types": "./dist/lib/handlers/index.d.ts",
-      "import": "./dist/lib/handlers/index.js",
-      "require": "./dist/lib/handlers/index.js"
-    },
-    "./utils": {
-      "types": "./dist/lib/utils.d.ts",
-      "import": "./dist/lib/utils.js",
-      "require": "./dist/lib/utils.js"
-    },
-    "./server": {
-      "types": "./dist/server/index.d.ts",
-      "import": "./dist/server/index.js",
-      "require": "./dist/server/index.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "handlers": [
-        "dist/lib/handlers/index.d.ts"
-      ],
-      "utils": [
-        "dist/lib/utils.d.ts"
-      ],
-      "server": [
-        "dist/server/index.d.ts"
-      ]
-    }
-  },
+  "name": "@hjaewon/abap-mcp-adt-powerup",
+  "mcpName": "io.github.hjaewon/abap-mcp-adt-powerup",
+  "version": "4.9.0",
+  "main": "dist/server.bundle.cjs",
   "scripts": {
     "test:init": "node -e \"const fs=require('fs'),s='tests/test-config.yaml',t=s+'.template';if(fs.existsSync(s)){console.log(s+' already exists, skipping (use test:reinit to overwrite)')}else{fs.copyFileSync(t,s);console.log('Created '+s+' — edit lines marked CHANGE')}\"",
     "test:reinit": "node -e \"const fs=require('fs'),s='tests/test-config.yaml',t=s+'.template';fs.copyFileSync(t,s);console.log('Recreated '+s+' from template')\"",
@@ -71,7 +35,7 @@
     "smoke:mcp:crud": "node ./tools/mcp-crud-smoke.js",
     "smoke:mcp:matrix": "node ./tools/mcp-crud-matrix.js",
     "docs:tools": "node ./tools/generate-tools-docs.js",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && npm run bundle",
     "package": "npm pack",
     "package:build": "npm run build && npm pack",
     "docker:pack": "npm pack && mkdir -p docker/packages && mv *.tgz docker/packages/",
@@ -106,16 +70,33 @@
     "service-key",
     "crud"
   ],
-  "author": "babamba2 <psspss1122@gmail.com>",
-  "description": "SAP ABAP ADT MCP server with full CRUD for on-prem and ABAP Cloud (BTP), plus JWT/XSUAA and service-key destination auth",
+  "author": "hjaewon",
+  "contributors": [
+    "babamba2 <psspss1122@gmail.com>"
+  ],
+  "description": "SAP ABAP ADT MCP server with full CRUD for on-prem and ABAP Cloud (BTP), plus JWT/XSUAA and service-key destination auth. Single-file bundled distribution (sc4sap engine fork).",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/babamba2/abap-mcp-adt-powerup.git"
+    "url": "git+https://github.com/hjaewon/abap-mcp-adt-powerup.git"
   },
   "devDependencies": {
+    "@babamba2/mcp-abap-adt-auth-broker": "^1.0.5",
+    "@babamba2/mcp-abap-adt-auth-providers": "^1.0.5",
+    "@babamba2/mcp-abap-adt-auth-stores": "^1.0.4",
+    "@babamba2/mcp-abap-adt-clients": "^3.13.1",
+    "@babamba2/mcp-abap-adt-header-validator": "^0.1.8",
+    "@babamba2/mcp-abap-adt-interfaces": "^5.0.0",
+    "@babamba2/mcp-abap-adt-logger": "^0.1.4",
+    "@babamba2/mcp-abap-connection": "^1.5.3",
     "@biomejs/biome": "^2.4.6",
     "@modelcontextprotocol/inspector": "^0.21.1",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "axios": "^1.13.6",
+    "fast-xml-parser": "^5.4.2",
+    "js-yaml": "^4.1.1",
+    "xml-js": "^1.6.11",
+    "zod": "^4.3.6",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.3.5",
@@ -139,22 +120,8 @@
     "yaml": "^2.8.1"
   },
   "dependencies": {
-    "@babamba2/mcp-abap-adt-auth-broker": "^1.0.5",
-    "@babamba2/mcp-abap-adt-auth-providers": "^1.0.5",
-    "@babamba2/mcp-abap-adt-auth-stores": "^1.0.4",
-    "@babamba2/mcp-abap-adt-clients": "^3.13.1",
-    "@babamba2/mcp-abap-adt-header-validator": "^0.1.8",
-    "@babamba2/mcp-abap-adt-interfaces": "^5.0.0",
-    "@babamba2/mcp-abap-adt-logger": "^0.1.4",
-    "@babamba2/mcp-abap-connection": "^1.5.3",
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "axios": "^1.13.6",
-    "fast-xml-parser": "^5.4.2",
-    "js-yaml": "^4.1.1",
     "pino": "^10.1.0",
-    "pino-pretty": "^13.1.3",
-    "xml-js": "^1.6.11",
-    "zod": "^4.3.6"
+    "pino-pretty": "^13.1.3"
   },
   "optionalDependencies": {
     "@napi-rs/keyring": "^1.1.0",
@@ -165,16 +132,17 @@
     "npm": ">=9.0.0"
   },
   "files": [
-    "dist/",
+    "dist/server.bundle.cjs",
     "bin/",
-    "docs/",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "bin": {
-    "mcp-abap-adt": "bin/mcp-abap-adt.js",
-    "mcp-abap-adt-v2": "bin/mcp-abap-adt-v2.js"
+    "mcp-abap-adt": "bin/mcp-abap-adt.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "jest": {
     "preset": "ts-jest",
@@ -226,7 +194,7 @@
   },
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/babamba2/abap-mcp-adt-powerup/issues"
+    "url": "https://github.com/hjaewon/abap-mcp-adt-powerup/issues"
   },
-  "homepage": "https://github.com/babamba2/abap-mcp-adt-powerup#readme"
+  "homepage": "https://github.com/hjaewon/abap-mcp-adt-powerup#readme"
 }

@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [4.9.0] - 2026-07-06
+
+First release under `@hjaewon/abap-mcp-adt-powerup` (independent fork; upstream `@babamba2` remains at 4.8.4).
+
+### Added
+- `GetAtcFindings` — read-only ATC (ABAP Test Cockpit) findings tool: object → ADT URI resolution, worklist run, parsed findings with priority/check title/message. (`feat/atc-findings`)
+- Single-file server bundle `dist/server.bundle.cjs` built with esbuild (`npm run bundle`). Internal `@babamba2/mcp-abap-*` runtime packages, MCP SDK, axios, XML/YAML parsers and zod are baked in; `pino`/`pino-pretty` (dynamic transport loading) and native optionals (`node-rfc`, `@napi-rs/keyring`) stay external.
+
+### Changed
+- npm distribution is now the bundle only: tarball 7 files / ~1.4MB, installs 2 runtime deps (+2 optional) instead of the full dependency tree. Verified identical MCP `tools/list` (144 tools) against the unbundled server.
+- `bin/mcp-abap-adt` runs the bundle; nonexistent `mcp-abap-adt-v2` bin entry removed.
+- Library subpath exports (`./handlers`, `./utils`, `./server`) removed from the published package — for library consumption use the upstream `@babamba2` package or this repo's source.
+
 ## [4.8.4] - 2026-04-29
 
 ### Added
