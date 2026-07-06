@@ -5,8 +5,8 @@ Generated from code in `src/handlers/**` (not from docs).
 Tools available on legacy SAP systems (BASIS < 7.50) connected via RFC.
 Legacy systems support a subset of tools — primarily Class, Interface, View, Program, Function Group/Module, Package (read/update/delete), Include, Unit Test, and common utilities.
 
-- Total tools: 167
-- Read-Only: 24
+- Total tools: 168
+- Read-Only: 25
 - High-Level: 71
 - Low-Level: 72
 
@@ -46,6 +46,7 @@ Legacy systems support a subset of tools — primarily Class, Interface, View, P
     - [GrepPackages](#greppackages-read-only-search)
   - [System](#read-only-system)
     - [CheckSyntax](#checksyntax-read-only-system)
+    - [GetCallGraph](#getcallgraph-read-only-system)
     - [GetInstalledComponents](#getinstalledcomponents-read-only-system)
     - [GetSystemInfo](#getsysteminfo-read-only-system)
     - [ReloadProfile](#reloadprofile-read-only-system)
@@ -554,6 +555,25 @@ Legacy systems support a subset of tools — primarily Class, Interface, View, P
 - `object_name` (string, required) - [read-only] Name of the object to check (e.g., ZCL_MY_CLASS).
 - `object_type` (string, required) - [read-only] ABAP object kind to check: 
 - `source_code` (string, optional) - [read-only] Optional proposed ABAP source code to check in place. Only honored for object_type 
+
+---
+
+<a id="getcallgraph-read-only-system"></a>
+#### GetCallGraph (Read-Only / System)
+**Description:** [read-only] Build a call-relationship graph (callers and/or callees) for an ABAP object via server-side breadth-first traversal — replaces repeated round-trips of GetWhereUsed by expanding discovered nodes automatically up to a bounded depth and node count. Static analysis only: dynamic calls, BAdI dispatch, and other runtime-only wiring are not captured.
+
+**Source:** `src/handlers/system/readonly/handleGetCallGraph.ts`
+
+**Available in:** `onprem`, `cloud`, `legacy`
+
+**Parameters:**
+- `custom_only` (boolean, optional (default: true)) - When true (default), only Z*/Y*//NAMESPACE/ custom objects are expanded further during traversal — standard SAP objects still appear as leaf nodes but are not traversed past. The root is always expanded regardless of this flag.
+- `depth` (number, optional (default: DEFAULT_DEPTH)) - Max BFS depth from the root (1-4). Default 2.
+- `direction` (string, optional (default: callers)) - 
+- `function_group` (string, optional) - Function group name — required only when object_type is FUNC (function modules are addressed as GROUP|NAME).
+- `max_nodes` (number, optional (default: DEFAULT_MAX_NODES)) - Global cap on total nodes in the returned graph (max 300). Default 100.
+- `object_name` (string, required) - Root ABAP object name.
+- `object_type` (string, required) - Root ABAP object type.
 
 ---
 

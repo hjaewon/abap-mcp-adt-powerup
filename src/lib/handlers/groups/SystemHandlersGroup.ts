@@ -37,6 +37,10 @@ import {
   handleGetAdtTypes,
 } from '../../../handlers/system/readonly/handleGetAllTypes';
 import {
+  TOOL_DEFINITION as GetCallGraph_Tool,
+  handleGetCallGraph,
+} from '../../../handlers/system/readonly/handleGetCallGraph';
+import {
   TOOL_DEFINITION as GetInactiveObjects_Tool,
   handleGetInactiveObjects,
 } from '../../../handlers/system/readonly/handleGetInactiveObjects';
@@ -215,6 +219,10 @@ export class SystemHandlersGroup extends BaseHandlerGroup {
       {
         toolDefinition: GetWhereUsed_Tool,
         handler: (args: any) => handleGetWhereUsed(this.context, args),
+      },
+      {
+        toolDefinition: GetCallGraph_Tool,
+        handler: (args: any) => handleGetCallGraph(this.context, args),
       },
       {
         toolDefinition: GetObjectInfo_Tool,

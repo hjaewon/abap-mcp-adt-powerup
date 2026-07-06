@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [4.11.0] - 2026-07-06
+
+### Added
+- `GetCallGraph` — read-only call-relationship graph via server-side BFS (replaces dozens of chained `GetWhereUsed` round-trips). `direction` callers (where-used traversal) / callees (source fetch + dependency scan) / both, `depth` 1-4, `max_nodes` cap with `truncated` flag, `custom_only` gate (standard SAP objects appear as leaves but are not expanded). Function modules discovered mid-traversal resolve their function group from the where-used reference URI; unresolvable ones are marked `expandable:false`. Static analysis only — dynamic calls / BAdI dispatch are not captured. Object-level nodes (method-scoped where-used is not exposed by the ADT client wrapper).
+
+### Notes
+- Phase 3 (vsp package-analysis suite: health/slim/boundaries/api-surface) intentionally NOT ported to the server — those are composition pipelines best built as sc4sap skills over existing primitives. GetCallGraph is the only Phase-3 item that belongs server-side (round-trip/token economics).
+
 ## [4.10.2] - 2026-07-06
 
 ### Fixed

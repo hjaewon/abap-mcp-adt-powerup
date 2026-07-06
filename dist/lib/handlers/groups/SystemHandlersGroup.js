@@ -12,6 +12,7 @@ const handleGetAbapAST_1 = require("../../../handlers/system/readonly/handleGetA
 const handleGetAbapSemanticAnalysis_1 = require("../../../handlers/system/readonly/handleGetAbapSemanticAnalysis");
 const handleGetAbapSystemSymbols_1 = require("../../../handlers/system/readonly/handleGetAbapSystemSymbols");
 const handleGetAllTypes_1 = require("../../../handlers/system/readonly/handleGetAllTypes");
+const handleGetCallGraph_1 = require("../../../handlers/system/readonly/handleGetCallGraph");
 const handleGetInactiveObjects_1 = require("../../../handlers/system/readonly/handleGetInactiveObjects");
 const handleGetInstalledComponents_1 = require("../../../handlers/system/readonly/handleGetInstalledComponents");
 const handleGetObjectInfo_1 = require("../../../handlers/system/readonly/handleGetObjectInfo");
@@ -115,6 +116,10 @@ class SystemHandlersGroup extends BaseHandlerGroup_js_1.BaseHandlerGroup {
             {
                 toolDefinition: handleGetWhereUsed_1.TOOL_DEFINITION,
                 handler: (args) => (0, handleGetWhereUsed_1.handleGetWhereUsed)(this.context, args),
+            },
+            {
+                toolDefinition: handleGetCallGraph_1.TOOL_DEFINITION,
+                handler: (args) => (0, handleGetCallGraph_1.handleGetCallGraph)(this.context, args),
             },
             {
                 toolDefinition: handleGetObjectInfo_1.TOOL_DEFINITION,
