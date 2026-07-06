@@ -55,6 +55,8 @@
     "format": "npx biome format --write src",
     "build": "npx biome check --write --diagnostic-level=error src && npx tsc -p tsconfig.json",
     "build:fast": "npx tsc -p tsconfig.json",
+    "bundle": "esbuild dist/server/launcher.js --bundle --platform=node --format=cjs --target=node20 --outfile=dist/server.bundle.cjs --external:node-rfc --external:@napi-rs/keyring --external:pino --external:pino-pretty --log-level=warning",
+    "build:bundle": "npm run build && npm run bundle",
     "check-todos": "node tools/check-todos.js",
     "start": "node ./bin/mcp-abap-adt.js",
     "start:http": "node ./bin/mcp-abap-adt.js --transport=http",
@@ -120,6 +122,7 @@
     "commander": "^14.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "esbuild": "^0.28.1",
     "express": "^5.1.0",
     "express-rate-limit": "^8.3.0",
     "husky": "^9.1.7",
@@ -136,14 +139,14 @@
     "yaml": "^2.8.1"
   },
   "dependencies": {
-    "@babamba2/mcp-abap-adt-clients": "^3.13.1",
     "@babamba2/mcp-abap-adt-auth-broker": "^1.0.5",
     "@babamba2/mcp-abap-adt-auth-providers": "^1.0.5",
     "@babamba2/mcp-abap-adt-auth-stores": "^1.0.4",
-    "@babamba2/mcp-abap-connection": "^1.5.3",
+    "@babamba2/mcp-abap-adt-clients": "^3.13.1",
     "@babamba2/mcp-abap-adt-header-validator": "^0.1.8",
     "@babamba2/mcp-abap-adt-interfaces": "^5.0.0",
     "@babamba2/mcp-abap-adt-logger": "^0.1.4",
+    "@babamba2/mcp-abap-connection": "^1.5.3",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "axios": "^1.13.6",
     "fast-xml-parser": "^5.4.2",
@@ -154,8 +157,8 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "node-rfc": "^3.3.1",
-    "@napi-rs/keyring": "^1.1.0"
+    "@napi-rs/keyring": "^1.1.0",
+    "node-rfc": "^3.3.1"
   },
   "engines": {
     "node": ">=20.0.0",
