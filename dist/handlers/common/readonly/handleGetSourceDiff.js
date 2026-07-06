@@ -8,7 +8,7 @@ const utils_1 = require("../../../lib/utils");
 exports.TOOL_DEFINITION = {
     name: 'GetSourceDiff',
     available_in: ['onprem', 'cloud', 'legacy'],
-    description: '[read-only] Compute a unified diff between the source code of two ABAP objects (e.g. compare ZCL_A vs ZCL_B, or a program vs a copy of itself). Supports CLAS, PROG, INTF, INCL.',
+    description: '[read-only] Compute a unified diff between the source code of two ABAP objects (e.g. compare ZCL_A vs ZCL_B, or a program vs a copy of itself). Supports CLAS, PROG, INTF, INCL. If the two sources differ too extensively to safely diff (after trimming common leading/trailing lines), returns { identical: false, too_large: true, reason, stats: { old_lines, new_lines } } instead of a diff.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -98,6 +98,22 @@ async function handleGetSourceDiff(context, args) {
             oldLabel: `${object_name_a.toUpperCase()} (${typeA})`,
             newLabel: `${object_name_b.toUpperCase()} (${typeB})`,
         });
+        if ('too_large' in result) {
+            return {
+                isError: false,
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify({
+                            identical: false,
+                            too_large: true,
+                            reason: result.reason,
+                            stats: result.stats,
+                        }),
+                    },
+                ],
+            };
+        }
         return {
             isError: false,
             content: [

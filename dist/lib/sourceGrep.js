@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MAX_LINES_PER_OBJECT = void 0;
 exports.compileGrepRegex = compileGrepRegex;
 exports.grepText = grepText;
 exports.aggregateGrepResults = aggregateGrepResults;
@@ -12,7 +13,7 @@ exports.aggregateGrepResults = aggregateGrepResults;
  */
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 /** Hard cap on lines scanned per object. Bounds worst-case regex work without needing a timeout. */
-const MAX_LINES_PER_OBJECT = 20000;
+exports.MAX_LINES_PER_OBJECT = 20000;
 /** Max context lines allowed before/after a match. */
 const MAX_CONTEXT_LINES = 5;
 /**
@@ -41,12 +42,12 @@ function compileGrepRegex(pattern, caseInsensitive = false) {
 function grepText(sourceText, regex, contextLines, maxMatches) {
     const lines = sourceText.split(/\r\n|\r|\n/);
     const clampedContext = Math.max(0, Math.min(contextLines, MAX_CONTEXT_LINES));
-    const scanLimit = Math.min(lines.length, MAX_LINES_PER_OBJECT);
+    const scanLimit = Math.min(lines.length, exports.MAX_LINES_PER_OBJECT);
     const matches = [];
-    let hasMore = false;
+    let matchLimitReached = false;
     for (let i = 0; i < scanLimit; i++) {
         if (maxMatches <= 0 || matches.length >= maxMatches) {
-            hasMore = true;
+            matchLimitReached = true;
             break;
         }
         if (regex.test(lines[i])) {
@@ -62,11 +63,15 @@ function grepText(sourceText, regex, contextLines, maxMatches) {
             });
         }
     }
-    if (!hasMore && scanLimit < lines.length) {
-        // Line-count guard cut the scan short before maxMatches was reached.
-        hasMore = true;
-    }
-    return { matches, hasMore };
+    // Line-count guard cut the scan short before the end of the source was
+    // reached — independent of whether the match cap was also hit.
+    const lineCapReached = scanLimit < lines.length;
+    return {
+        matches,
+        matchLimitReached,
+        lineCapReached,
+        hasMore: matchLimitReached || lineCapReached,
+    };
 }
 /**
  * Aggregates grep results across multiple already-fetched objects, applying a
@@ -99,16 +104,28 @@ function aggregateGrepResults(objects, regex, options = {}) {
             continue;
         }
         const remaining = maxResults - total;
-        const { matches, hasMore } = grepText(obj.source, regex, contextLines, remaining);
+        const { matches, matchLimitReached, lineCapReached } = grepText(obj.source, regex, contextLines, remaining);
         if (matches.length > 0) {
-            results.push({
+            const entry = {
                 object_type: obj.object_type,
                 object_name: obj.object_name,
                 matches,
-            });
+            };
+            if (lineCapReached)
+                entry.truncated_object = true;
+            results.push(entry);
             total += matches.length;
         }
-        if (hasMore) {
+        else if (lineCapReached) {
+            // Oversized object, scanned up to the line cap, with no matches found
+            // in the scanned portion — distinct from the global max_results skip.
+            skipped.push({
+                object: label,
+                reason: `object exceeds the ${exports.MAX_LINES_PER_OBJECT}-line scan cap; no matches found in the scanned portion`,
+            });
+        }
+        if (matchLimitReached) {
+            // Only a match-cap hit means the shared/global result budget is exhausted.
             truncated = true;
         }
     }

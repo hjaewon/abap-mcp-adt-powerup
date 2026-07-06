@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+## [4.10.1] - 2026-07-06
+
+Codex review fixes on the 4.10.0 vsp-adopt tools (3 verified P2 findings).
+
+### Fixed
+- `GetClassMethod` / `UpdateClassMethod`: method statement parser now accepts AMDP additions (`METHOD x BY DATABASE PROCEDURE ...`, including multi-line statements) and namespaced names (`/iwbep/if_x~method`) — previously reported such methods as missing and rejected valid replacement blocks.
+- `GrepPackages` / `GrepObjects`: an object exceeding the 20000-line scan cap no longer aborts the whole package scan as if `max_results` were reached; per-object truncation is now reported separately (`truncated_object` / distinct skip reason) and the global stop only triggers on the actual match budget.
+- `GetSourceDiff`: common prefix/suffix trimming before the LCS matrix plus a hard 4M-cell guard — two large mostly-identical sources no longer allocate O(N*M) memory, and fully-differing oversized inputs return a structured `too_large` result instead of stalling the server.
+
 ## [4.10.0] - 2026-07-06
 
 vsp ([vibing-steampunk](https://github.com/oisee/vibing-steampunk)) feature adoption — token-efficiency and code-intelligence tools.

@@ -1,4 +1,9 @@
-import { computeUnifiedDiff } from '../../lib/textDiff';
+import { computeUnifiedDiff, MAX_DIFF_CELLS } from '../../lib/textDiff';
+
+/** Builds an array of `count` distinct, non-matching lines (constructed programmatically, not as a literal huge string). */
+function buildLines(count: number, label: string): string[] {
+  return Array.from({ length: count }, (_, i) => `${label}_${i}`);
+}
 
 describe('computeUnifiedDiff', () => {
   it('reports identical for empty inputs', () => {
@@ -105,5 +110,75 @@ describe('computeUnifiedDiff', () => {
   it('normalizes different line-ending styles when comparing for equality', () => {
     const result = computeUnifiedDiff('a\r\nb\r\nc', 'a\nb\nc');
     expect(result.identical).toBe(true);
+  });
+
+  it('produces correct hunk line numbers when a large common prefix/suffix is trimmed', () => {
+    const prefix = buildLines(500, 'same_prefix');
+    const suffix = buildLines(500, 'same_suffix');
+    const oldText = [...prefix, 'OLD_MIDDLE_LINE', ...suffix].join('\n');
+    const newText = [...prefix, 'NEW_MIDDLE_LINE', ...suffix].join('\n');
+
+    const result = computeUnifiedDiff(oldText, newText, { contextLines: 1 });
+
+    expect('too_large' in result).toBe(false);
+    if ('too_large' in result) return;
+    expect(result.identical).toBe(false);
+    expect(result.stats).toEqual({ added: 1, removed: 1, hunks: 1 });
+    // The changed line is at 1-based position 501 (after 500 identical
+    // prefix lines) in both old and new — trimming must not shift this.
+    expect(result.diff).toBe(
+      [
+        '--- a',
+        '+++ b',
+        '@@ -500,3 +500,3 @@',
+        ' same_prefix_499',
+        '-OLD_MIDDLE_LINE',
+        '+NEW_MIDDLE_LINE',
+        ' same_suffix_0',
+      ].join('\n'),
+    );
+  });
+
+  it('does not flag huge inputs as too_large when trimming reduces them to a small diff', () => {
+    // 3000 identical lines on each side of a single differing line -- far
+    // more than MAX_DIFF_CELLS would allow untrimmed (3001 x 3001), but the
+    // trimmed middle is 1x1.
+    const shared = buildLines(3000, 'identical_line');
+    const oldText = [...shared, 'OLD_LINE'].join('\n');
+    const newText = [...shared, 'NEW_LINE'].join('\n');
+
+    const result = computeUnifiedDiff(oldText, newText);
+
+    expect('too_large' in result).toBe(false);
+    if ('too_large' in result) return;
+    expect(result.identical).toBe(false);
+    expect(result.stats).toEqual({ added: 1, removed: 1, hunks: 1 });
+  });
+
+  it('returns a structured too_large result instead of diffing when the trimmed table exceeds MAX_DIFF_CELLS', () => {
+    // No shared prefix/suffix at all (every line differs), and large enough
+    // that oldLines.length * newLines.length exceeds MAX_DIFF_CELLS.
+    const size = Math.ceil(Math.sqrt(MAX_DIFF_CELLS)) + 10;
+    const oldLines = buildLines(size, 'old_only_line');
+    const newLines = buildLines(size, 'new_only_line');
+
+    const result = computeUnifiedDiff(oldLines.join('\n'), newLines.join('\n'));
+
+    expect('too_large' in result).toBe(true);
+    if (!('too_large' in result)) return;
+    expect(result.identical).toBe(false);
+    expect(result.too_large).toBe(true);
+    expect(result.reason).toEqual(expect.stringContaining('too large'));
+    expect(result.stats).toEqual({ old_lines: size, new_lines: size });
+  });
+
+  it('does not allocate an oversized table for identical huge inputs (fully trimmed away)', () => {
+    const lines = buildLines(3000, 'identical_line');
+    const text = lines.join('\n');
+
+    const result = computeUnifiedDiff(text, text);
+
+    expect(result.identical).toBe(true);
+    expect(result.diff).toBe('');
   });
 });

@@ -261,7 +261,7 @@ Legacy systems support a subset of tools — primarily Class, Interface, View, P
 
 <a id="getsourcediff-read-only-common"></a>
 #### GetSourceDiff (Read-Only / Common)
-**Description:** [read-only] Compute a unified diff between the source code of two ABAP objects (e.g. compare ZCL_A vs ZCL_B, or a program vs a copy of itself). Supports CLAS, PROG, INTF, INCL.
+**Description:** [read-only] Compute a unified diff between the source code of two ABAP objects (e.g. compare ZCL_A vs ZCL_B, or a program vs a copy of itself). Supports CLAS, PROG, INTF, INCL. If the two sources differ too extensively to safely diff (after trimming common leading/trailing lines), returns { identical: false, too_large: true, reason, stats: { old_lines, new_lines } } instead of a diff.
 
 **Source:** `src/handlers/common/readonly/handleGetSourceDiff.ts`
 

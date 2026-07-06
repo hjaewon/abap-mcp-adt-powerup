@@ -8,7 +8,7 @@
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 
 /** Hard cap on lines scanned per object. Bounds worst-case regex work without needing a timeout. */
-const MAX_LINES_PER_OBJECT = 20000;
+export const MAX_LINES_PER_OBJECT = 20000;
 
 /** Max context lines allowed before/after a match. */
 const MAX_CONTEXT_LINES = 5;
@@ -22,7 +22,20 @@ export interface GrepMatch {
 
 export interface GrepTextResult {
   matches: GrepMatch[];
-  /** True when scanning stopped before reaching the end of the source (max_matches reached or the line cap was hit). */
+  /**
+   * True once `maxMatches` matches were found and the scan stopped early to
+   * respect that budget. This is the only condition that should count
+   * against a caller's shared/global result cap.
+   */
+  matchLimitReached: boolean;
+  /**
+   * True when the per-object MAX_LINES_PER_OBJECT guard stopped the scan
+   * before reaching the end of the source. Independent of matchLimitReached
+   * — a single oversized object can hit this with zero matches found, and it
+   * says nothing about a caller's shared/global result budget.
+   */
+  lineCapReached: boolean;
+  /** True when scanning stopped before reaching the end of the source, for either reason above. */
   hasMore: boolean;
 }
 
@@ -39,6 +52,9 @@ export interface ObjectGrepResult {
   object_type: string;
   object_name: string;
   matches: GrepMatch[];
+  /** True when this object's source exceeded MAX_LINES_PER_OBJECT and was only
+   * partially scanned — matches may exist beyond the scanned portion. */
+  truncated_object?: boolean;
 }
 
 export interface SkippedObject {
@@ -101,11 +117,11 @@ export function grepText(
   const scanLimit = Math.min(lines.length, MAX_LINES_PER_OBJECT);
 
   const matches: GrepMatch[] = [];
-  let hasMore = false;
+  let matchLimitReached = false;
 
   for (let i = 0; i < scanLimit; i++) {
     if (maxMatches <= 0 || matches.length >= maxMatches) {
-      hasMore = true;
+      matchLimitReached = true;
       break;
     }
     if (regex.test(lines[i])) {
@@ -124,12 +140,16 @@ export function grepText(
     }
   }
 
-  if (!hasMore && scanLimit < lines.length) {
-    // Line-count guard cut the scan short before maxMatches was reached.
-    hasMore = true;
-  }
+  // Line-count guard cut the scan short before the end of the source was
+  // reached — independent of whether the match cap was also hit.
+  const lineCapReached = scanLimit < lines.length;
 
-  return { matches, hasMore };
+  return {
+    matches,
+    matchLimitReached,
+    lineCapReached,
+    hasMore: matchLimitReached || lineCapReached,
+  };
 }
 
 /**
@@ -172,21 +192,31 @@ export function aggregateGrepResults(
       continue;
     }
     const remaining = maxResults - total;
-    const { matches, hasMore } = grepText(
+    const { matches, matchLimitReached, lineCapReached } = grepText(
       obj.source,
       regex,
       contextLines,
       remaining,
     );
     if (matches.length > 0) {
-      results.push({
+      const entry: ObjectGrepResult = {
         object_type: obj.object_type,
         object_name: obj.object_name,
         matches,
-      });
+      };
+      if (lineCapReached) entry.truncated_object = true;
+      results.push(entry);
       total += matches.length;
+    } else if (lineCapReached) {
+      // Oversized object, scanned up to the line cap, with no matches found
+      // in the scanned portion — distinct from the global max_results skip.
+      skipped.push({
+        object: label,
+        reason: `object exceeds the ${MAX_LINES_PER_OBJECT}-line scan cap; no matches found in the scanned portion`,
+      });
     }
-    if (hasMore) {
+    if (matchLimitReached) {
+      // Only a match-cap hit means the shared/global result budget is exhausted.
       truncated = true;
     }
   }

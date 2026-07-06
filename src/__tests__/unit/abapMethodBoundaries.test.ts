@@ -143,6 +143,78 @@ describe('abapMethodBoundaries', () => {
       });
     });
 
+    it('locates an AMDP method with a single-line BY DATABASE PROCEDURE addition', () => {
+      const source = [
+        'CLASS zcl_foo IMPLEMENTATION.',
+        '  METHOD get_data BY DATABASE PROCEDURE FOR HDB LANGUAGE SQLSCRIPT USING t001.',
+        '    lt_result = select * from t001;',
+        '  ENDMETHOD.',
+        'ENDCLASS.',
+      ].join('\n');
+
+      expect(findMethodBoundary(source, 'get_data')).toEqual({
+        name: 'get_data',
+        startLine: 2,
+        endLine: 4,
+      });
+    });
+
+    it('locates an AMDP method whose BY DATABASE PROCEDURE addition spans multiple lines', () => {
+      const source = [
+        'CLASS zcl_foo IMPLEMENTATION.',
+        '  METHOD get_data',
+        '    BY DATABASE PROCEDURE',
+        '    FOR HDB LANGUAGE SQLSCRIPT',
+        '    USING t001.',
+        '    lt_result = select * from t001;',
+        '  ENDMETHOD.',
+        'ENDCLASS.',
+      ].join('\n');
+
+      expect(findMethodBoundary(source, 'get_data')).toEqual({
+        name: 'get_data',
+        startLine: 2,
+        endLine: 7,
+      });
+    });
+
+    it('locates a namespaced interface method implementation (leading /NS/ plus tilde)', () => {
+      const source = [
+        'CLASS zcl_foo IMPLEMENTATION.',
+        '  METHOD /iwbep/if_mgw_appl_srv_runtime~get_entityset.',
+        '    RETURN.',
+        '  ENDMETHOD.',
+        'ENDCLASS.',
+      ].join('\n');
+
+      expect(
+        findMethodBoundary(
+          source,
+          '/iwbep/if_mgw_appl_srv_runtime~get_entityset',
+        ),
+      ).toEqual({
+        name: '/iwbep/if_mgw_appl_srv_runtime~get_entityset',
+        startLine: 2,
+        endLine: 4,
+      });
+    });
+
+    it('locates a method implementation of a namespaced class name', () => {
+      const source = [
+        'CLASS /ns1/cl_foo IMPLEMENTATION.',
+        '  METHOD /ns1/get_data.',
+        '    RETURN.',
+        '  ENDMETHOD.',
+        'ENDCLASS.',
+      ].join('\n');
+
+      expect(findMethodBoundary(source, '/ns1/get_data')).toEqual({
+        name: '/ns1/get_data',
+        startLine: 2,
+        endLine: 4,
+      });
+    });
+
     it('returns null and an accurate available-methods list when not found', () => {
       const source = [
         '  METHOD alpha.',
@@ -200,6 +272,38 @@ describe('abapMethodBoundaries', () => {
       const result = validateMethodBlock(block, 'get_data');
       expect(result.valid).toBe(false);
       expect(result.error).toMatch(/must start with "METHOD/i);
+    });
+
+    it('accepts an AMDP method header with a multi-line BY DATABASE PROCEDURE addition', () => {
+      const block = [
+        'METHOD get_data',
+        '  BY DATABASE PROCEDURE',
+        '  FOR HDB LANGUAGE SQLSCRIPT',
+        '  USING t001.',
+        '  lt_result = select * from t001;',
+        'ENDMETHOD.',
+      ].join('\n');
+      expect(validateMethodBlock(block, 'get_data')).toEqual({
+        valid: true,
+        name: 'get_data',
+      });
+    });
+
+    it('accepts a namespaced interface method header', () => {
+      const block = [
+        'METHOD /iwbep/if_mgw_appl_srv_runtime~get_entityset.',
+        '  RETURN.',
+        'ENDMETHOD.',
+      ].join('\n');
+      expect(
+        validateMethodBlock(
+          block,
+          '/iwbep/if_mgw_appl_srv_runtime~get_entityset',
+        ),
+      ).toEqual({
+        valid: true,
+        name: '/iwbep/if_mgw_appl_srv_runtime~get_entityset',
+      });
     });
   });
 

@@ -2,8 +2,17 @@ import {
   aggregateGrepResults,
   compileGrepRegex,
   grepText,
+  MAX_LINES_PER_OBJECT,
   type ObjectGrepInput,
 } from '../../lib/sourceGrep';
+
+/** Builds a source with more than MAX_LINES_PER_OBJECT lines, none of which match anything meaningful. */
+function buildOversizedSource(): string {
+  return Array.from(
+    { length: MAX_LINES_PER_OBJECT + 5 },
+    (_, i) => `DATA(lv_x_${i}) = 1.`,
+  ).join('\n');
+}
 
 describe('compileGrepRegex', () => {
   it('compiles a valid pattern', () => {
@@ -102,6 +111,23 @@ describe('grepText', () => {
     const regex = compileGrepRegex('SELECT SINGLE');
     const { hasMore } = grepText(source, regex, 0, 10);
     expect(hasMore).toBe(false);
+  });
+
+  it('reports matchLimitReached (not lineCapReached) when the match cap is hit', () => {
+    const regex = compileGrepRegex('SELECT SINGLE');
+    const { matchLimitReached, lineCapReached } = grepText(source, regex, 0, 1);
+    expect(matchLimitReached).toBe(true);
+    expect(lineCapReached).toBe(false);
+  });
+
+  it('reports lineCapReached (not matchLimitReached) when only the per-object line cap is hit', () => {
+    const oversized = buildOversizedSource();
+    const regex = compileGrepRegex('NO_SUCH_TOKEN_ANYWHERE');
+    const result = grepText(oversized, regex, 0, 100);
+    expect(result.matches).toHaveLength(0);
+    expect(result.matchLimitReached).toBe(false);
+    expect(result.lineCapReached).toBe(true);
+    expect(result.hasMore).toBe(true);
   });
 });
 
@@ -221,6 +247,69 @@ describe('aggregateGrepResults', () => {
       {
         object: 'PROG Z_PROG_B',
         reason: 'max_results reached; object not scanned',
+      },
+    ]);
+  });
+
+  it('does not stop the scan or mark truncated when an oversized object with no matches precedes normal objects (package-scan simulation)', () => {
+    const objects: ObjectGrepInput[] = [
+      {
+        object_type: 'PROG',
+        object_name: 'Z_HUGE_NO_MATCH',
+        source: buildOversizedSource(),
+      },
+      {
+        object_type: 'CLAS',
+        object_name: 'ZCL_A',
+        source: 'METHOD foo.\nSELECT * FROM mara.\nENDMETHOD.',
+      },
+      {
+        object_type: 'PROG',
+        object_name: 'Z_PROG_B',
+        source: 'REPORT z_prog_b.\nSELECT * FROM marc.',
+      },
+    ];
+
+    const result = aggregateGrepResults(objects, regex, { max_results: 100 });
+
+    // Total matches are well under max_results, so the global scan must not
+    // be marked truncated just because one object hit its own line cap.
+    expect(result.total_matches).toBe(2);
+    expect(result.truncated).toBe(false);
+    // Both objects scanned after the oversized one must still contribute
+    // their matches — the scan must not have stopped early.
+    expect(result.results).toEqual([
+      {
+        object_type: 'CLAS',
+        object_name: 'ZCL_A',
+        matches: [
+          {
+            line: 2,
+            text: 'SELECT * FROM mara.',
+            context_before: [],
+            context_after: [],
+          },
+        ],
+      },
+      {
+        object_type: 'PROG',
+        object_name: 'Z_PROG_B',
+        matches: [
+          {
+            line: 2,
+            text: 'SELECT * FROM marc.',
+            context_before: [],
+            context_after: [],
+          },
+        ],
+      },
+    ]);
+    // The oversized, no-match object is reported distinctly from the
+    // "max_results reached" skip reason.
+    expect(result.skipped).toEqual([
+      {
+        object: 'PROG Z_HUGE_NO_MATCH',
+        reason: `object exceeds the ${MAX_LINES_PER_OBJECT}-line scan cap; no matches found in the scanned portion`,
       },
     ]);
   });

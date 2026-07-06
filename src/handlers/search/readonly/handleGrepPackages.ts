@@ -17,6 +17,7 @@ import { runWithConcurrency } from '../../../lib/promisePool';
 import {
   compileGrepRegex,
   grepText,
+  MAX_LINES_PER_OBJECT,
   type ObjectGrepResult,
   type SkippedObject,
 } from '../../../lib/sourceGrep';
@@ -207,21 +208,31 @@ export async function handleGrepPackages(
         }
 
         objectsScanned++;
-        const { matches, hasMore } = grepText(
+        const { matches, matchLimitReached, lineCapReached } = grepText(
           source,
           regex,
           contextLines,
           remaining,
         );
         if (matches.length > 0) {
-          results.push({
+          const entry: ObjectGrepResult = {
             object_type: candidate.object_type,
             object_name: candidate.object_name,
             matches,
-          });
+          };
+          if (lineCapReached) entry.truncated_object = true;
+          results.push(entry);
           totalMatches += matches.length;
+        } else if (lineCapReached) {
+          // Oversized object, scanned up to the line cap, with no matches
+          // found in the scanned portion — this must not stop the scan of
+          // other candidates or count toward max_results.
+          skipped.push({
+            object: label,
+            reason: `object exceeds the ${MAX_LINES_PER_OBJECT}-line scan cap; no matches found in the scanned portion`,
+          });
         }
-        if (hasMore || totalMatches >= maxResults) {
+        if (matchLimitReached || totalMatches >= maxResults) {
           capReached = true;
         }
       },

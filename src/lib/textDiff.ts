@@ -4,8 +4,12 @@
  * Uses a full O(N*M) LCS dynamic-programming backtrack to compute the
  * line-level edit script between two texts, then groups it into standard
  * unified-diff hunks (`@@ -l,c +l,c @@`) with configurable context lines.
- * O(N*M) is acceptable here because inputs are bounded ABAP source files,
- * not arbitrary large corpora.
+ *
+ * Before running the DP, common leading/trailing lines are trimmed off (ABAP
+ * source comparisons are typically mostly identical), so the O(N*M) table is
+ * sized to the differing middle section only. A hard cap on the trimmed
+ * table size (MAX_DIFF_CELLS) guards against pathologically large,
+ * mostly-different inputs still allocating an unbounded table.
  */
 
 export type DiffOpType = 'equal' | 'add' | 'remove';
@@ -42,9 +46,52 @@ export interface UnifiedDiffResult {
   stats: { added: number; removed: number; hunks: number };
 }
 
+/**
+ * Returned instead of UnifiedDiffResult when the (trimmed) input is too
+ * large to safely allocate an LCS table for. See MAX_DIFF_CELLS.
+ */
+export interface UnifiedDiffTooLargeResult {
+  identical: false;
+  too_large: true;
+  reason: string;
+  stats: { old_lines: number; new_lines: number };
+}
+
+export type UnifiedDiffOutcome = UnifiedDiffResult | UnifiedDiffTooLargeResult;
+
+/**
+ * Hard cap on (trimmed old lines) * (trimmed new lines) LCS table cells —
+ * about 2000x2000. Applied after common prefix/suffix trimming, so this only
+ * bounds the differing middle section, not the raw input size.
+ */
+export const MAX_DIFF_CELLS = 4_000_000;
+
 function splitLines(text: string): string[] {
   if (text === '') return [];
   return text.split(/\r\n|\r|\n/);
+}
+
+/** Length of the common leading run shared by both line arrays. */
+function commonPrefixLength(a: string[], b: string[]): number {
+  const max = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < max && a[i] === b[i]) i++;
+  return i;
+}
+
+/**
+ * Length of the common trailing run shared by both line arrays, not
+ * overlapping the `prefixLen` lines already claimed by the common prefix.
+ */
+function commonSuffixLength(
+  a: string[],
+  b: string[],
+  prefixLen: number,
+): number {
+  const max = Math.min(a.length, b.length) - prefixLen;
+  let i = 0;
+  while (i < max && a[a.length - 1 - i] === b[b.length - 1 - i]) i++;
+  return i;
 }
 
 /**
@@ -163,19 +210,69 @@ function formatHunk(hunk: DiffHunk): string {
 
 /**
  * Computes a full unified diff between two texts.
+ *
+ * Common leading/trailing lines are trimmed off before running the LCS, and
+ * a hard cap on the trimmed table size guards against unbounded allocation
+ * for huge, mostly-different inputs (see MAX_DIFF_CELLS).
  */
 export function computeUnifiedDiff(
   oldText: string,
   newText: string,
   options: UnifiedDiffOptions = {},
-): UnifiedDiffResult {
+): UnifiedDiffOutcome {
   const contextLines = Math.max(0, options.contextLines ?? 3);
   const oldLabel = options.oldLabel ?? 'a';
   const newLabel = options.newLabel ?? 'b';
 
   const oldLines = splitLines(oldText);
   const newLines = splitLines(newText);
-  const ops = diffLines(oldLines, newLines);
+
+  const prefixLen = commonPrefixLength(oldLines, newLines);
+  const suffixLen = commonSuffixLength(oldLines, newLines, prefixLen);
+  const midOld = oldLines.slice(prefixLen, oldLines.length - suffixLen);
+  const midNew = newLines.slice(prefixLen, newLines.length - suffixLen);
+
+  if (midOld.length * midNew.length > MAX_DIFF_CELLS) {
+    return {
+      identical: false,
+      too_large: true,
+      reason:
+        `Diff too large to compute: ${oldLines.length} old line(s) vs ${newLines.length} new line(s) ` +
+        `(${midOld.length}x${midNew.length} remain after trimming ${prefixLen} common leading and ` +
+        `${suffixLen} common trailing line(s), exceeding the ${MAX_DIFF_CELLS}-cell limit).`,
+      stats: { old_lines: oldLines.length, new_lines: newLines.length },
+    };
+  }
+
+  const midOps = diffLines(midOld, midNew);
+
+  const ops: DiffOp[] = [];
+  for (let k = 0; k < prefixLen; k++) {
+    ops.push({
+      type: 'equal',
+      line: oldLines[k],
+      oldPos: k + 1,
+      newPos: k + 1,
+    });
+  }
+  for (const op of midOps) {
+    ops.push({
+      type: op.type,
+      line: op.line,
+      oldPos: op.oldPos + prefixLen,
+      newPos: op.newPos + prefixLen,
+    });
+  }
+  for (let k = 0; k < suffixLen; k++) {
+    const oldIdx = oldLines.length - suffixLen + k;
+    const newIdx = newLines.length - suffixLen + k;
+    ops.push({
+      type: 'equal',
+      line: oldLines[oldIdx],
+      oldPos: oldIdx + 1,
+      newPos: newIdx + 1,
+    });
+  }
 
   const added = ops.filter((o) => o.type === 'add').length;
   const removed = ops.filter((o) => o.type === 'remove').length;

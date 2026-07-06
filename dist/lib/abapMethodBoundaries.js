@@ -12,6 +12,13 @@
  * - `"` starts an inline comment, unless it appears inside a string literal.
  * - String literals are delimited by `'`; `''` inside a literal is an
  *   escaped single quote.
+ *
+ * The METHOD statement itself is only recognized by its opening line —
+ * `METHOD <name>` optionally followed by additions (e.g. AMDP's
+ * `BY DATABASE PROCEDURE FOR HDB LANGUAGE SQLSCRIPT USING ...`) which may
+ * span multiple lines up to the statement-ending period. Those additions are
+ * never parsed; the boundary simply starts at the `METHOD` line and ends at
+ * the next matching `ENDMETHOD.`.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listMethodImplementations = listMethodImplementations;
@@ -19,7 +26,12 @@ exports.findMethodBoundary = findMethodBoundary;
 exports.extractMethodSource = extractMethodSource;
 exports.validateMethodBlock = validateMethodBlock;
 exports.spliceMethodSource = spliceMethodSource;
-const METHOD_START_RE = /^METHOD\s+([A-Za-z_][A-Za-z0-9_~]*)\s*\.\s*$/i;
+/** Identifier: letters/digits/underscore, must start with a letter or underscore. */
+const NAME_SEGMENT = '[A-Za-z_][A-Za-z0-9_]*';
+/** Method name: optional leading `/NAMESPACE/` segment, then an identifier,
+ * then an optional `~identifier` (interface method implementation) suffix. */
+const METHOD_NAME_SOURCE = `(?:/${NAME_SEGMENT}/)?${NAME_SEGMENT}(?:~${NAME_SEGMENT})?`;
+const METHOD_START_RE = new RegExp(`^METHOD\\s+(${METHOD_NAME_SOURCE})(?=[\\s.]|$)`, 'i');
 const METHOD_END_RE = /^ENDMETHOD\s*\.\s*$/i;
 function splitLines(source) {
     return source.split(/\r\n|\r|\n/);
