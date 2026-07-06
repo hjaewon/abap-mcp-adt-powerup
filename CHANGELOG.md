@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+## [4.9.1] - 2026-07-06
+
+Codex review follow-ups on the 4.9.0 bundle distribution.
+
+### Fixed
+- `--version` resolved package.json two levels above the package root when run from the single-file bundle (`dist/server.bundle.cjs`); now walks upward so both bundled and unbundled layouts work.
+- Removed `main` pointing at the executable bundle — `require()` of the package no longer boots the MCP server as an import side effect (CLI-only distribution).
+- `getDefaultLogger()` (BaseMcpServer / EmbeddableMcpServer / handlerLogger) falls back to a no-op logger when `@babamba2/mcp-abap-adt-logger` is absent — the published tarball ships without it.
+- Docs: `@mcp-abap-adt/core` references updated to `@hjaewon/abap-mcp-adt-powerup`, phantom `mcp-abap-adt-v2` bin references removed, library subpath import example marked source-checkout-only.
+- Deduplicated `pino`/`pino-pretty` (were in both dependencies and devDependencies with different ranges).
+
 ## [4.9.0] - 2026-07-06
 
 First release under `@hjaewon/abap-mcp-adt-powerup` (independent fork; upstream `@babamba2` remains at 4.8.4).

@@ -9,11 +9,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOOL_DEFINITION = void 0;
 exports.handleGetClass = handleGetClass;
 const clients_1 = require("../../../lib/clients");
+const contextPrologue_1 = require("../../../lib/contextPrologue");
 const utils_1 = require("../../../lib/utils");
 exports.TOOL_DEFINITION = {
     name: 'GetClass',
     available_in: ['onprem', 'cloud', 'legacy'],
-    description: 'Retrieve ABAP class source code. Supports reading active or inactive version.',
+    description: 'Retrieve ABAP class source code. Supports reading active or inactive version. Optionally append a compressed dependency context (public signatures of referenced classes/interfaces) via with_context.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -27,6 +28,16 @@ exports.TOOL_DEFINITION = {
                 description: 'Version to read: "active" (default) for deployed version, "inactive" for modified but not activated version.',
                 default: 'active',
             },
+            with_context: {
+                type: 'boolean',
+                description: 'If true, append a "dependency_context" field with compressed public contracts (signatures) of every class/interface referenced by this class, so callers get surrounding context in one call. Function modules referenced via CALL FUNCTION are noted but not resolved. Default false.',
+                default: false,
+            },
+            context_max_deps: {
+                type: 'number',
+                description: 'Max number of dependencies to resolve when with_context is true (1-15). Default 10.',
+                default: 10,
+            },
         },
         required: ['class_name'],
     },
@@ -39,7 +50,7 @@ exports.TOOL_DEFINITION = {
 async function handleGetClass(context, args) {
     const { connection, logger } = context;
     try {
-        const { class_name, version = 'active' } = args;
+        const { class_name, version = 'active', with_context = false, context_max_deps = 10, } = args;
         // Validation
         if (!class_name) {
             return (0, utils_1.return_error)(new Error('class_name is required'));
@@ -59,15 +70,19 @@ async function handleGetClass(context, args) {
                 ? readResult.readResult.data
                 : JSON.stringify(readResult.readResult.data);
             logger?.info(`✅ GetClass completed successfully: ${className}`);
+            const responseData = {
+                success: true,
+                class_name: className,
+                version,
+                source_code: sourceCode,
+                status: readResult.readResult.status,
+                status_text: readResult.readResult.statusText,
+            };
+            if (with_context) {
+                responseData.dependency_context = await (0, contextPrologue_1.buildContextPrologue)(context, sourceCode, context_max_deps);
+            }
             return (0, utils_1.return_response)({
-                data: JSON.stringify({
-                    success: true,
-                    class_name: className,
-                    version,
-                    source_code: sourceCode,
-                    status: readResult.readResult.status,
-                    status_text: readResult.readResult.statusText,
-                }, null, 2),
+                data: JSON.stringify(responseData, null, 2),
             });
         }
         catch (error) {

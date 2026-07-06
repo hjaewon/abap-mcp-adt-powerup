@@ -94,9 +94,18 @@ function hydrateSystemContextFromEnvFile(envFilePath?: string): void {
 }
 
 function showVersion(): void {
-  const packageJsonPath = path.join(__dirname, '..', '..', 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  console.log(packageJson.version);
+  // Walk upward so the lookup works from both dist/server/launcher.js and the
+  // single-file bundle at dist/server.bundle.cjs.
+  let dir = __dirname;
+  for (let i = 0; i < 5; i++) {
+    const candidate = path.join(dir, 'package.json');
+    if (fs.existsSync(candidate)) {
+      console.log(JSON.parse(fs.readFileSync(candidate, 'utf8')).version);
+      process.exit(0);
+    }
+    dir = path.dirname(dir);
+  }
+  console.log('unknown');
   process.exit(0);
 }
 

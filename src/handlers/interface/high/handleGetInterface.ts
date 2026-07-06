@@ -6,6 +6,7 @@
  */
 
 import { createAdtClient } from '../../../lib/clients';
+import { buildContextPrologue } from '../../../lib/contextPrologue';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
 import {
   type AxiosResponse,
@@ -17,7 +18,7 @@ export const TOOL_DEFINITION = {
   name: 'GetInterface',
   available_in: ['onprem', 'cloud', 'legacy'] as const,
   description:
-    'Retrieve ABAP interface definition. Supports reading active or inactive version.',
+    'Retrieve ABAP interface definition. Supports reading active or inactive version. Optionally append a compressed dependency context (public signatures of referenced classes/interfaces) via with_context.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -32,6 +33,18 @@ export const TOOL_DEFINITION = {
           'Version to read: "active" (default) for deployed version, "inactive" for modified but not activated version.',
         default: 'active',
       },
+      with_context: {
+        type: 'boolean',
+        description:
+          'If true, append a "dependency_context" field with compressed public contracts (signatures) of every class/interface referenced by this interface, so callers get surrounding context in one call. Function modules referenced via CALL FUNCTION are noted but not resolved. Default false.',
+        default: false,
+      },
+      context_max_deps: {
+        type: 'number',
+        description:
+          'Max number of dependencies to resolve when with_context is true (1-15). Default 10.',
+        default: 10,
+      },
     },
     required: ['interface_name'],
   },
@@ -40,6 +53,8 @@ export const TOOL_DEFINITION = {
 interface GetInterfaceArgs {
   interface_name: string;
   version?: 'active' | 'inactive';
+  with_context?: boolean;
+  context_max_deps?: number;
 }
 
 /**
@@ -53,7 +68,12 @@ export async function handleGetInterface(
 ) {
   const { connection, logger } = context;
   try {
-    const { interface_name, version = 'active' } = args as GetInterfaceArgs;
+    const {
+      interface_name,
+      version = 'active',
+      with_context = false,
+      context_max_deps = 10,
+    } = args as GetInterfaceArgs;
 
     // Validation
     if (!interface_name) {
@@ -85,19 +105,25 @@ export async function handleGetInterface(
 
       logger?.info(`✅ GetInterface completed successfully: ${interfaceName}`);
 
+      const responseData: Record<string, unknown> = {
+        success: true,
+        interface_name: interfaceName,
+        version,
+        interface_data: interfaceData,
+        status: readResult.readResult.status,
+        status_text: readResult.readResult.statusText,
+      };
+
+      if (with_context) {
+        responseData.dependency_context = await buildContextPrologue(
+          context,
+          interfaceData,
+          context_max_deps,
+        );
+      }
+
       return return_response({
-        data: JSON.stringify(
-          {
-            success: true,
-            interface_name: interfaceName,
-            version,
-            interface_data: interfaceData,
-            status: readResult.readResult.status,
-            status_text: readResult.readResult.statusText,
-          },
-          null,
-          2,
-        ),
+        data: JSON.stringify(responseData, null, 2),
       } as AxiosResponse);
     } catch (error: any) {
       logger?.error(

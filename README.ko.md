@@ -2,7 +2,7 @@
 
 **🌐 Language / 언어 / 言語**: [English](README.md) · **한국어** · [日本語](README.ja.md)
 
-[![npm version](https://img.shields.io/npm/v/@mcp-abap-adt/core)](https://www.npmjs.com/package/@mcp-abap-adt/core)
+[![npm version](https://img.shields.io/npm/v/@hjaewon/abap-mcp-adt-powerup)](https://www.npmjs.com/package/@hjaewon/abap-mcp-adt-powerup)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io/)
@@ -76,7 +76,7 @@ Claude Code, Cline, Cursor, Windsurf 등 MCP 호환 클라이언트에서 ABAP �
 ### 1. 설치
 
 ```bash
-npm install -g @mcp-abap-adt/core
+npm install -g @hjaewon/abap-mcp-adt-powerup
 ```
 
 ### 2. 환경 변수 설정
@@ -111,7 +111,7 @@ mcp-abap-adt --transport=sse --port 3000
 ### npm (권장)
 
 ```bash
-npm install -g @mcp-abap-adt/core
+npm install -g @hjaewon/abap-mcp-adt-powerup
 ```
 
 ### 소스에서 설치
@@ -343,7 +343,7 @@ mcp-abap-adt --transport=sse --port 3000
   "mcpServers": {
     "mcp-abap-adt": {
       "command": "npx",
-      "args": ["-y", "@mcp-abap-adt/core"],
+      "args": ["-y", "@hjaewon/abap-mcp-adt-powerup"],
       "env": {
         "SAP_URL": "https://your-sap-system.com",
         "SAP_CLIENT": "100",
@@ -363,7 +363,7 @@ mcp-abap-adt --transport=sse --port 3000
   "mcpServers": {
     "mcp-abap-adt": {
       "command": "npx",
-      "args": ["-y", "@mcp-abap-adt/core"],
+      "args": ["-y", "@hjaewon/abap-mcp-adt-powerup"],
       "env": {
         "SAP_URL": "https://your-sap-system.com",
         "SAP_CLIENT": "100",
@@ -394,7 +394,7 @@ npx @mcp-abap-adt/configurator
 기존 MCP 서버(CAP/CDS 등)에 통합:
 
 ```typescript
-import { HandlerExporter } from '@mcp-abap-adt/core/handlers';
+import { HandlerExporter } from '@hjaewon/abap-mcp-adt-powerup/handlers'; // source checkout only — the npm package ships the bundled CLI without library subpath exports
 
 const exporter = new HandlerExporter({
   includeReadOnly: true,

@@ -6,6 +6,7 @@
  */
 
 import { createAdtClient } from '../../../lib/clients';
+import { buildContextPrologue } from '../../../lib/contextPrologue';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
 import {
   type AxiosResponse,
@@ -17,7 +18,7 @@ export const TOOL_DEFINITION = {
   name: 'GetProgram',
   available_in: ['onprem', 'legacy'] as const,
   description:
-    'Retrieve ABAP program definition. Supports reading active or inactive version.',
+    'Retrieve ABAP program definition. Supports reading active or inactive version. Optionally append a compressed dependency context (public signatures of referenced classes/interfaces) via with_context.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -32,6 +33,18 @@ export const TOOL_DEFINITION = {
           'Version to read: "active" (default) for deployed version, "inactive" for modified but not activated version.',
         default: 'active',
       },
+      with_context: {
+        type: 'boolean',
+        description:
+          'If true, append a "dependency_context" field with compressed public contracts (signatures) of every class/interface referenced by this program, so callers get surrounding context in one call. Function modules referenced via CALL FUNCTION are noted but not resolved. Default false.',
+        default: false,
+      },
+      context_max_deps: {
+        type: 'number',
+        description:
+          'Max number of dependencies to resolve when with_context is true (1-15). Default 10.',
+        default: 10,
+      },
     },
     required: ['program_name'],
   },
@@ -40,6 +53,8 @@ export const TOOL_DEFINITION = {
 interface GetProgramArgs {
   program_name: string;
   version?: 'active' | 'inactive';
+  with_context?: boolean;
+  context_max_deps?: number;
 }
 
 /**
@@ -53,7 +68,12 @@ export async function handleGetProgram(
 ) {
   const { connection, logger } = context;
   try {
-    const { program_name, version = 'active' } = args as GetProgramArgs;
+    const {
+      program_name,
+      version = 'active',
+      with_context = false,
+      context_max_deps = 10,
+    } = args as GetProgramArgs;
 
     // Validation
     if (!program_name) {
@@ -85,19 +105,25 @@ export async function handleGetProgram(
 
       logger?.info(`✅ GetProgram completed successfully: ${programName}`);
 
+      const responseData: Record<string, unknown> = {
+        success: true,
+        program_name: programName,
+        version,
+        program_data: programData,
+        status: readResult.readResult.status,
+        status_text: readResult.readResult.statusText,
+      };
+
+      if (with_context) {
+        responseData.dependency_context = await buildContextPrologue(
+          context,
+          programData,
+          context_max_deps,
+        );
+      }
+
       return return_response({
-        data: JSON.stringify(
-          {
-            success: true,
-            program_name: programName,
-            version,
-            program_data: programData,
-            status: readResult.readResult.status,
-            status_text: readResult.readResult.statusText,
-          },
-          null,
-          2,
-        ),
+        data: JSON.stringify(responseData, null, 2),
       } as AxiosResponse);
     } catch (error: any) {
       logger?.error(

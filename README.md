@@ -2,7 +2,7 @@
 
 **🌐 Language / 언어 / 言語**: **English** · [한국어](README.ko.md) · [日本語](README.ja.md)
 
-[![npm version](https://img.shields.io/npm/v/@mcp-abap-adt/core)](https://www.npmjs.com/package/@mcp-abap-adt/core)
+[![npm version](https://img.shields.io/npm/v/@hjaewon/abap-mcp-adt-powerup)](https://www.npmjs.com/package/@hjaewon/abap-mcp-adt-powerup)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io/)
@@ -112,7 +112,7 @@ Legend: ✅ works fully · ⚠️ works with caveats · ❌ refuses with a clear
 ### 1. Install
 
 ```bash
-npm install -g @mcp-abap-adt/core
+npm install -g @hjaewon/abap-mcp-adt-powerup
 ```
 
 ### 2. Configure environment
@@ -148,7 +148,7 @@ mcp-abap-adt --transport=sse --port 3000
 ### From npm (Recommended)
 
 ```bash
-npm install -g @mcp-abap-adt/core
+npm install -g @hjaewon/abap-mcp-adt-powerup
 ```
 
 ### From source
@@ -380,7 +380,7 @@ mcp-abap-adt --transport=sse --port 3000
   "mcpServers": {
     "mcp-abap-adt": {
       "command": "npx",
-      "args": ["-y", "@mcp-abap-adt/core"],
+      "args": ["-y", "@hjaewon/abap-mcp-adt-powerup"],
       "env": {
         "SAP_URL": "https://your-sap-system.com",
         "SAP_CLIENT": "100",
@@ -400,7 +400,7 @@ mcp-abap-adt --transport=sse --port 3000
   "mcpServers": {
     "mcp-abap-adt": {
       "command": "npx",
-      "args": ["-y", "@mcp-abap-adt/core"],
+      "args": ["-y", "@hjaewon/abap-mcp-adt-powerup"],
       "env": {
         "SAP_URL": "https://your-sap-system.com",
         "SAP_CLIENT": "100",
@@ -471,7 +471,7 @@ Each handler category contains subdirectories:
 For integrating into existing MCP servers (e.g., CAP/CDS applications):
 
 ```typescript
-import { HandlerExporter } from '@mcp-abap-adt/core/handlers';
+import { HandlerExporter } from '@hjaewon/abap-mcp-adt-powerup/handlers'; // source checkout only — the npm package ships the bundled CLI without library subpath exports
 
 const exporter = new HandlerExporter({
   includeReadOnly: true,
@@ -550,8 +550,7 @@ npm run build
 ```
 mcp-abap-adt/
 ├── bin/                    # CLI entry points
-│   ├── mcp-abap-adt.js    # Main CLI
-│   └── mcp-abap-adt-v2.js # V2 server variant
+│   └── mcp-abap-adt.js    # Main CLI (runs dist/server.bundle.cjs)
 ├── src/
 │   ├── handlers/           # 30 handler categories (287 tools)
 │   ├── lib/

@@ -6,6 +6,7 @@
  */
 
 import { createAdtClient } from '../../../lib/clients';
+import { buildContextPrologue } from '../../../lib/contextPrologue';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
 import {
   type AxiosResponse,
@@ -17,7 +18,7 @@ export const TOOL_DEFINITION = {
   name: 'GetClass',
   available_in: ['onprem', 'cloud', 'legacy'] as const,
   description:
-    'Retrieve ABAP class source code. Supports reading active or inactive version.',
+    'Retrieve ABAP class source code. Supports reading active or inactive version. Optionally append a compressed dependency context (public signatures of referenced classes/interfaces) via with_context.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -32,6 +33,18 @@ export const TOOL_DEFINITION = {
           'Version to read: "active" (default) for deployed version, "inactive" for modified but not activated version.',
         default: 'active',
       },
+      with_context: {
+        type: 'boolean',
+        description:
+          'If true, append a "dependency_context" field with compressed public contracts (signatures) of every class/interface referenced by this class, so callers get surrounding context in one call. Function modules referenced via CALL FUNCTION are noted but not resolved. Default false.',
+        default: false,
+      },
+      context_max_deps: {
+        type: 'number',
+        description:
+          'Max number of dependencies to resolve when with_context is true (1-15). Default 10.',
+        default: 10,
+      },
     },
     required: ['class_name'],
   },
@@ -40,6 +53,8 @@ export const TOOL_DEFINITION = {
 interface GetClassArgs {
   class_name: string;
   version?: 'active' | 'inactive';
+  with_context?: boolean;
+  context_max_deps?: number;
 }
 
 /**
@@ -53,7 +68,12 @@ export async function handleGetClass(
 ) {
   const { connection, logger } = context;
   try {
-    const { class_name, version = 'active' } = args as GetClassArgs;
+    const {
+      class_name,
+      version = 'active',
+      with_context = false,
+      context_max_deps = 10,
+    } = args as GetClassArgs;
 
     // Validation
     if (!class_name) {
@@ -85,19 +105,25 @@ export async function handleGetClass(
 
       logger?.info(`✅ GetClass completed successfully: ${className}`);
 
+      const responseData: Record<string, unknown> = {
+        success: true,
+        class_name: className,
+        version,
+        source_code: sourceCode,
+        status: readResult.readResult.status,
+        status_text: readResult.readResult.statusText,
+      };
+
+      if (with_context) {
+        responseData.dependency_context = await buildContextPrologue(
+          context,
+          sourceCode,
+          context_max_deps,
+        );
+      }
+
       return return_response({
-        data: JSON.stringify(
-          {
-            success: true,
-            class_name: className,
-            version,
-            source_code: sourceCode,
-            status: readResult.readResult.status,
-            status_text: readResult.readResult.statusText,
-          },
-          null,
-          2,
-        ),
+        data: JSON.stringify(responseData, null, 2),
       } as AxiosResponse);
     } catch (error: any) {
       logger?.error(

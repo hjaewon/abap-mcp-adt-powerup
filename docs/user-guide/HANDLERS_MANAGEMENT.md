@@ -81,19 +81,19 @@ V2 server supports flexible handler set configuration through the `--exposition`
 
 ```bash
 # Default: readonly + high (+ search + system always included)
-node bin/mcp-abap-adt-v2.js --transport=stdio --env-path=.env
+node bin/mcp-abap-adt.js --transport=stdio --env-path=.env
 
 # Only read-only operations (safest)
-node bin/mcp-abap-adt-v2.js --transport=stdio --env-path=.env --exposition=readonly
+node bin/mcp-abap-adt.js --transport=stdio --env-path=.env --exposition=readonly
 
 # Read-only + high-level writes (recommended)
-node bin/mcp-abap-adt-v2.js --transport=stdio --env-path=.env --exposition=readonly,high
+node bin/mcp-abap-adt.js --transport=stdio --env-path=.env --exposition=readonly,high
 
 # Compact facade only
-node bin/mcp-abap-adt-v2.js --transport=stdio --env-path=.env --exposition=compact
+node bin/mcp-abap-adt.js --transport=stdio --env-path=.env --exposition=compact
 
 # All operations (dangerous, for development only)
-node bin/mcp-abap-adt-v2.js --transport=stdio --env-path=.env --exposition=readonly,high,low,compact
+node bin/mcp-abap-adt.js --transport=stdio --env-path=.env --exposition=readonly,high,low,compact
 ```
 
 ### Config File
@@ -115,7 +115,7 @@ Set `MCP_EXPOSITION`:
 
 ```bash
 export MCP_EXPOSITION=readonly,high
-node bin/mcp-abap-adt-v2.js --transport=stdio --env-path=.env
+node bin/mcp-abap-adt.js --transport=stdio --env-path=.env
 ```
 
 ## Generating Handler Documentation

@@ -371,8 +371,20 @@ class BaseMcpServer extends mcp_js_1.McpServer {
 }
 exports.BaseMcpServer = BaseMcpServer;
 function getDefaultLogger() {
-    const require = (0, node_module_1.createRequire)(__filename);
-    const mod = require('@babamba2/mcp-abap-adt-logger');
-    return mod.defaultLogger ?? new mod.DefaultLogger();
+    try {
+        const require = (0, node_module_1.createRequire)(__filename);
+        const mod = require('@babamba2/mcp-abap-adt-logger');
+        return mod.defaultLogger ?? new mod.DefaultLogger();
+    }
+    catch {
+        // Bundled distribution ships without the logger package — fall back to a no-op.
+        const noopFn = () => { };
+        return {
+            info: noopFn,
+            debug: noopFn,
+            warn: noopFn,
+            error: noopFn,
+        };
+    }
 }
 //# sourceMappingURL=BaseMcpServer.js.map

@@ -492,7 +492,18 @@ export abstract class BaseMcpServer extends McpServer {
 }
 
 function getDefaultLogger(): Logger {
-  const require = createRequire(__filename);
-  const mod = require('@babamba2/mcp-abap-adt-logger');
-  return mod.defaultLogger ?? new mod.DefaultLogger();
+  try {
+    const require = createRequire(__filename);
+    const mod = require('@babamba2/mcp-abap-adt-logger');
+    return mod.defaultLogger ?? new mod.DefaultLogger();
+  } catch {
+    // Bundled distribution ships without the logger package — fall back to a no-op.
+    const noopFn = () => {};
+    return {
+      info: noopFn,
+      debug: noopFn,
+      warn: noopFn,
+      error: noopFn,
+    } as Logger;
+  }
 }

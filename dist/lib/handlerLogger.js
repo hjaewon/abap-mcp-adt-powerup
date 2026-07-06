@@ -30,8 +30,14 @@ exports.noopLogger = {
     error: noopFn,
 };
 function getDefaultLogger() {
-    const require = (0, node_module_1.createRequire)(__filename);
-    const mod = require('@babamba2/mcp-abap-adt-logger');
-    return mod.defaultLogger ?? new mod.DefaultLogger();
+    try {
+        const require = (0, node_module_1.createRequire)(__filename);
+        const mod = require('@babamba2/mcp-abap-adt-logger');
+        return mod.defaultLogger ?? new mod.DefaultLogger();
+    }
+    catch {
+        // Bundled distribution ships without the logger package — fall back to no-op.
+        return exports.noopLogger;
+    }
 }
 //# sourceMappingURL=handlerLogger.js.map
