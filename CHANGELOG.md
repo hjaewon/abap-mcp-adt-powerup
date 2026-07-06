@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [4.10.2] - 2026-07-06
+
+### Fixed
+- `UpdateInterface` never passed `transport_request` to the ADT update call (`corrNr` URL param) — it was only echoed in the response, so updates to interfaces in transportable packages relied on the object already being in an open task. Now forwarded like `UpdateClass`; also fixes `UpdateSourceByPatch` on INTF.
+
 ## [4.10.1] - 2026-07-06
 
 Codex review fixes on the 4.10.0 vsp-adopt tools (3 verified P2 findings).
