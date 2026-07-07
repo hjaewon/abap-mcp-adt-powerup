@@ -317,7 +317,21 @@ export function return_error(error: any) {
       } else if (error.response?.data) {
         // For Axios errors with response data, safely extract response data
         if (typeof error.response.data === 'string') {
-          errorText = error.response.data.substring(0, 2000); // Limit length
+          const raw = error.response.data;
+          // ADT surfaces failures as an <exc:exception> (or <message>) XML
+          // payload. Parse it into a readable "SAP Error: ..." line + HTTP
+          // status instead of dumping 2000 chars of raw XML at the caller.
+          if (raw.includes('<exc:exception') || raw.includes('<message')) {
+            const extracted = extractAdtErrorMessage(
+              error,
+              raw.substring(0, 2000),
+            );
+            errorText = error.response.status
+              ? `${extracted} [HTTP ${error.response.status}]`
+              : extracted;
+          } else {
+            errorText = raw.substring(0, 2000); // Limit length
+          }
         } else {
           try {
             // Use a replacer function to avoid circular references

@@ -94,7 +94,10 @@ async function enrichNodeWithSearchObject(
         if (
           'text' in entry &&
           typeof entry.text === 'string' &&
-          !entry.text.trim().startsWith('Error: <?xml')
+          // Skip error payloads. ADT XML errors used to arrive as
+          // "Error: <?xml..."; return_error now parses them into
+          // "Error: SAP Error: ..." — neither is a valid objectReference doc.
+          !entry.text.trim().startsWith('Error:')
         ) {
           const parsed = parser.parse(entry.text);
           const refs =

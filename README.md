@@ -47,7 +47,7 @@ Read, create, update, and delete ABAP objects directly from Claude Code, Cline, 
 
 ## Features
 
-- **287 MCP Tools** for comprehensive SAP ABAP development
+- **339 MCP Tools** for comprehensive SAP ABAP development
 - **30+ ABAP object types** supported (Classes, Interfaces, CDS Views, Tables, RAP, and more)
 - **Multiple transport protocols**: stdio, HTTP (StreamableHTTP), SSE
 - **Flexible authentication**: JWT/XSUAA (OAuth2), Basic Auth, Service Key
@@ -281,16 +281,16 @@ For multi-tenant or proxy setups, pass SAP connection details via HTTP headers (
 
 ## Available Tools
 
-The server provides **287 tools** organized into handler groups:
+The server provides **339 tools** organized into handler groups:
 
 ### Tool Categories
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| **Read-Only** | 52 | Query and retrieve objects without modification |
-| **High-Level** | 113 | User-friendly CRUD operations |
-| **Low-Level** | 122 | Direct ADT API operations with granular control |
-| **Compact** | 22 | Streamlined access to common operations |
+| **Read-Only** | 70 | Query and retrieve objects without modification |
+| **High-Level** | 135 | User-friendly CRUD operations (includes the 22 Compact tools) |
+| **Low-Level** | 134 | Direct ADT API operations with granular control |
+| **Compact** | 22 | Streamlined access to common operations (subset of High-Level) |
 | **System** | - | Runtime analysis, profiling, dumps, SQL queries |
 | **Search** | - | Object discovery, where-used analysis |
 
@@ -552,7 +552,7 @@ mcp-abap-adt/
 ├── bin/                    # CLI entry points
 │   └── mcp-abap-adt.js    # Main CLI (runs dist/server.bundle.cjs)
 ├── src/
-│   ├── handlers/           # 30 handler categories (287 tools)
+│   ├── handlers/           # 30 handler categories (339 tools)
 │   ├── lib/
 │   │   ├── auth/           # Auth broker, JWT/XSUAA
 │   │   ├── config/         # Configuration management
@@ -709,7 +709,7 @@ Yes, for legacy systems where ADT HTTP APIs are unavailable. Set `connection_typ
 | [Installation](docs/installation/INSTALLATION.md) | Platform-specific installation |
 | [Client Configuration](docs/user-guide/CLIENT_CONFIGURATION.md) | MCP client setup |
 | [Authentication](docs/user-guide/AUTHENTICATION.md) | Auth methods & destinations |
-| [Available Tools](docs/user-guide/AVAILABLE_TOOLS.md) | Complete tool reference (287 tools) |
+| [Available Tools](docs/user-guide/AVAILABLE_TOOLS.md) | Complete tool reference (339 tools) |
 | [CLI Options](docs/user-guide/CLI_OPTIONS.md) | Command-line reference |
 | [YAML Config](docs/configuration/YAML_CONFIG.md) | YAML configuration guide |
 | [Architecture](docs/architecture/ARCHITECTURE.md) | System architecture overview |

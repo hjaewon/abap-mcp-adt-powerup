@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+## [4.13.0] - 2026-07-07
+
+### Added
+- **`ReleaseTransport`** (high-level) — release a transport request or task via the ADT CTS release action (`POST /sap/bc/adt/cts/transportrequests/<trkorr>/newreleasejobs`). Completes the transport lifecycle (previously only create/get/list existed, so releases had to happen in SE09/SE10/STMS outside the server). The readonly guard auto-classifies it as mutating (DEV-only; blocked on QA/PRD). Response parsing (`parseReleaseJobResponse`) is defensive across the varying release-report / refreshed-request / job-acknowledgement shapes SAP returns — unknown shapes yield nulls plus a raw excerpt rather than silently dropping data. **The compact matrix is intentionally unchanged** (`ReleaseTransport` is high-level only). Because the ADT release action is absent from this repo's captured discovery document, a 404/405 is surfaced as a success payload `{ supported: false, hint: ... }` (mirroring `GetInstalledComponents`) instead of a tool error.
+
+### Changed
+- **ADT exception XML in HTTP error responses is now parsed into readable text.** The central `return_error` path previously truncated an `<exc:exception>` error body to 2000 chars of raw XML; it now routes such bodies through the existing `extractAdtErrorMessage` parser to produce `SAP Error: <message> [HTTP nnn]`. Non-XML bodies, the object branch, and the network-error mappings (ENOTFOUND/ECONNREFUSED/ETIMEDOUT) are unchanged. `GetObjectInfo`'s error-entry filter was widened (`Error: <?xml` → `Error:`) so parsed error text is still skipped when scanning SearchObject results.
+
+### Docs
+- README tool counts re-synced to the generator (`AVAILABLE_TOOLS.md` is the source of truth): total **287 → 339**, Read-Only 52→70, High-Level 113→135 (includes the 22 Compact), Low-Level 122→134. `tools/generate-tools-docs.js` now emits a non-fatal drift warning when a README advertises a total that no longer matches the code-derived count.
+
 ## [4.12.0] - 2026-07-07
 
 ### Security

@@ -11,6 +11,7 @@ describe('readonlyGuard — checkToolAllowed (pure matrix)', () => {
   const mutations = [
     'CreateClass',
     'CreateTransport',
+    'ReleaseTransport',
     'CreateProgram',
     'UpdateClass',
     'UpdateFunctionModule',

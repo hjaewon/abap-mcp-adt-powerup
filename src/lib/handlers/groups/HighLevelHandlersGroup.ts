@@ -380,6 +380,10 @@ import {
   handleCreateTransport,
 } from '../../../handlers/transport/high/handleCreateTransport';
 import {
+  handleReleaseTransport,
+  TOOL_DEFINITION as ReleaseTransport_Tool,
+} from '../../../handlers/transport/high/handleReleaseTransport';
+import {
   TOOL_DEFINITION as CreateCdsUnitTest_Tool,
   handleCreateCdsUnitTest,
 } from '../../../handlers/unit_test/high/handleCreateCdsUnitTest';
@@ -511,6 +515,10 @@ export class HighLevelHandlersGroup extends BaseHandlerGroup {
       {
         toolDefinition: CreateTransport_Tool,
         handler: withContext(handleCreateTransport),
+      },
+      {
+        toolDefinition: ReleaseTransport_Tool,
+        handler: withContext(handleReleaseTransport),
       },
       {
         toolDefinition: CreateTable_Tool,

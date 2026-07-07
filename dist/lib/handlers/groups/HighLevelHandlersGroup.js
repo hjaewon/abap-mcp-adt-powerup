@@ -100,6 +100,7 @@ const handleReadTextElementsBulk_1 = require("../../../handlers/text_element/hig
 const handleUpdateTextElement_1 = require("../../../handlers/text_element/high/handleUpdateTextElement");
 const handleWriteTextElementsBulk_1 = require("../../../handlers/text_element/high/handleWriteTextElementsBulk");
 const handleCreateTransport_1 = require("../../../handlers/transport/high/handleCreateTransport");
+const handleReleaseTransport_1 = require("../../../handlers/transport/high/handleReleaseTransport");
 const handleCreateCdsUnitTest_1 = require("../../../handlers/unit_test/high/handleCreateCdsUnitTest");
 const handleCreateUnitTest_1 = require("../../../handlers/unit_test/high/handleCreateUnitTest");
 const handleDeleteCdsUnitTest_1 = require("../../../handlers/unit_test/high/handleDeleteCdsUnitTest");
@@ -175,6 +176,10 @@ class HighLevelHandlersGroup extends BaseHandlerGroup_js_1.BaseHandlerGroup {
             {
                 toolDefinition: handleCreateTransport_1.TOOL_DEFINITION,
                 handler: withContext(handleCreateTransport_1.handleCreateTransport),
+            },
+            {
+                toolDefinition: handleReleaseTransport_1.TOOL_DEFINITION,
+                handler: withContext(handleReleaseTransport_1.handleReleaseTransport),
             },
             {
                 toolDefinition: handleCreateTable_1.TOOL_DEFINITION,

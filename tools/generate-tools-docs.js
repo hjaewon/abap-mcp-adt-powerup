@@ -897,6 +897,34 @@ function main() {
   console.log(`✅ Documentation generated: ${OUTPUT_PATHS.low}`);
   console.log(`✅ Documentation generated: ${OUTPUT_PATHS.compact}`);
   console.log(`✅ Documentation generated: ${OUTPUT_PATHS.legacy}`);
+
+  warnOnReadmeDrift(tools.length);
+}
+
+/**
+ * Warn (non-fatal) when a README hardcodes a total tool count that no longer
+ * matches the generated total. README numbers are hand-maintained; this keeps
+ * them from silently drifting from the code-derived count.
+ */
+function warnOnReadmeDrift(total) {
+  for (const name of ['README.md', 'README.ko.md']) {
+    const file = path.join(__dirname, '..', name);
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, 'utf8');
+    const nums = new Set();
+    for (const m of text.matchAll(
+      /\*\*(\d+)개?(?:의)?\*{0,2}\s*(?:MCP\s+)?(?:[Tt]ools?|툴)/g,
+    )) {
+      nums.add(Number(m[1]));
+    }
+    for (const n of nums) {
+      if (n !== total) {
+        console.warn(
+          `⚠️  ${name} advertises ${n} tools but the generator counts ${total}. Update the README.`,
+        );
+      }
+    }
+  }
 }
 
 if (require.main === module) {

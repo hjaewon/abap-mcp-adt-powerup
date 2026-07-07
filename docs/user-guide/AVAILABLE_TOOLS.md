@@ -4,9 +4,9 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ## Summary
 
-- Total tools: 338
+- Total tools: 339
 - Read-only tools: 70
-- High-level tools: 134
+- High-level tools: 135
 - Low-level tools: 134
 
 - Compact tools: 22 (included in High-level group)
@@ -260,6 +260,7 @@ Generated from code in `src/handlers/**` (not from docs).
     - [WriteTextElementsBulk](#writetextelementsbulk-high-level-text-element)
   - [Transport](#high-level-transport)
     - [CreateTransport](#createtransport-high-level-transport)
+    - [ReleaseTransport](#releasetransport-high-level-transport)
   - [Unit Test](#high-level-unit-test)
     - [CreateCdsUnitTest](#createcdsunittest-high-level-unit-test)
     - [CreateUnitTest](#createunittest-high-level-unit-test)
@@ -3264,6 +3265,17 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
+<a id="releasetransport-high-level-transport"></a>
+#### ReleaseTransport (High-Level / Transport)
+**Description:** Release an ABAP transport request or task via the ADT CTS release action. 
+
+**Source:** `src/handlers/transport/high/handleReleaseTransport.ts`
+
+**Parameters:**
+- `transport_number` (string, required) - Transport request or task number to release (e.g., E19K905635, DEVK905123).
+
+---
+
 <a id="high-level-unit-test"></a>
 ### High-Level / Unit Test
 
@@ -5492,4 +5504,4 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
-*Last updated: 2026-07-06*
+*Last updated: 2026-07-07*
