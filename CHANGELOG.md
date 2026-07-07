@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+## [4.12.0] - 2026-07-07
+
+### Security
+- **Readonly guard rewritten fail-closed.** The tier guard classified mutations by `Create*`/`Update*`/`Delete*` name prefix only; an audit of the full 338-tool registry found ~60 mutating tools that bypassed it on QA/PRD profiles — `Activate*` (18), `Lock*`/`Unlock*` (35), `PatchGuiStatus`, `WriteTextElementsBulk`, and the compact dispatchers `HandlerCreate`/`HandlerUpdate`/`HandlerDelete`/`HandlerActivate`/`HandlerLock`/`HandlerUnlock`/`HandlerTransportCreate`. On QA/PRD a tool is now allowed only if positively classified read-only (read prefixes / compact read set) or by the execution matrix; unknown and future tools are blocked by default. Unit-test execution (`RunUnitTest`, `RunClassUnitTestsLow`, `HandlerUnitTestRun`) stays QA-allowed; profiling runs (`RuntimeRun*`, `HandlerProfileRun`) stay DEV-only.
+
+### Fixed
+- Empty `SAP_RFC_BACKEND=` resolves to the documented `odata` default instead of silently selecting the legacy `soap` backend (leftover from the 2026-04-22 default switch).
+
+### Added
+- Regression suite for the 4.8.3 keychain bug: session-store seeding must resolve `keychain:<service>/<account>` references to plaintext (literal pass-through caused 401 → account lockout after 3 tries); missing keychain entries surface as errors.
+
+### Changed
+- Fork identity completed: `server.json` / `glama.json` / README links / CONTRIBUTORS now consistently `@hjaewon` (4.9.0 had only migrated `package.json`); changelog backfilled for 4.7.0–4.8.2.
+- CI: SAP-independent unit suites (`__tests__/lib`, `__tests__/unit`) are a required gate (previously all tests were advisory via `continue-on-error`); package smoke-install glob follows the `@hjaewon` scope; release notes install snippet and docs link corrected.
+
 ## [4.11.0] - 2026-07-06
 
 ### Added

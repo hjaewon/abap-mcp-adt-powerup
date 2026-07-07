@@ -36,7 +36,14 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Run tests
+      # SAP-independent suites (lib + unit) are the required gate — a
+      # failure here fails CI.
+      - name: Run unit tests
+        run: npx jest --testPathPatterns='__tests__/(lib|unit)/'
+
+      # Integration suites need a live SAP system (tests/test-config.yaml)
+      # that CI runners do not have; keep them advisory.
+      - name: Run full test suite (advisory — needs live SAP)
         run: npm test
         continue-on-error: true
 
@@ -47,6 +54,6 @@ jobs:
       - name: Test package installation (Unix)
         if: matrix.os == 'ubuntu-latest' && matrix.node-version == 20
         run: |
-          PACKAGE_FILE=$(ls babamba2-abap-mcp-adt-powerup-*.tgz)
+          PACKAGE_FILE=$(ls hjaewon-abap-mcp-adt-powerup-*.tgz)
           npm install -g "./$PACKAGE_FILE"
           mcp-abap-adt --help || true

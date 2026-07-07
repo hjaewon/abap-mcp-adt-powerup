@@ -64,14 +64,16 @@ const native = __importStar(require("./nativeRfc"));
 const odata = __importStar(require("./odataRfc"));
 const soap = __importStar(require("./soapRfc"));
 function resolveBackend() {
-    const v = (process.env.SAP_RFC_BACKEND ?? 'odata').trim().toLowerCase();
+    // Unset and empty both mean "use the default" — an empty SAP_RFC_BACKEND=
+    // line in sap.env must not silently select the legacy soap backend.
+    const v = (process.env.SAP_RFC_BACKEND ?? '').trim().toLowerCase() || 'odata';
     if (v === 'native')
         return 'native';
     if (v === 'gateway')
         return 'gateway';
     if (v === 'odata')
         return 'odata';
-    if (v === 'soap' || v === '')
+    if (v === 'soap')
         return 'soap';
     throw new Error(`SAP_RFC_BACKEND must be 'soap' | 'native' | 'gateway' | 'odata' (got '${v}'). ` +
         `Default is 'odata'. Set in .sc4sap/sap.env.`);

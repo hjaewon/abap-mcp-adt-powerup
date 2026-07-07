@@ -64,10 +64,10 @@ jobs:
             ## Installation
 
             ```bash
-            npm install @babamba2/abap-mcp-adt-powerup
+            npm install @hjaewon/abap-mcp-adt-powerup
             ```
 
-            See [Installation Guide](https://github.com/${{ github.repository }}/blob/main/doc/installation/INSTALLATION.md) for details.
+            See [Installation Guide](https://github.com/${{ github.repository }}/blob/main/docs/installation/INSTALLATION.md) for details.
 
             ## What's Changed
         env:
