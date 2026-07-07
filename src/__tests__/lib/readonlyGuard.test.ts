@@ -16,24 +16,59 @@ describe('readonlyGuard — checkToolAllowed (pure matrix)', () => {
     'UpdateFunctionModule',
     'DeleteTable',
     'DeleteStructure',
+    // Non-CUD mutators that bypassed the original prefix denylist:
+    'ActivateObjects',
+    'ActivateClassLow',
+    'LockClassLow',
+    'UnlockTableLow',
+    'PatchGuiStatus',
+    'WriteTextElementsBulk',
+    // Compact-group dispatcher mutators:
+    'HandlerCreate',
+    'HandlerUpdate',
+    'HandlerDelete',
+    'HandlerActivate',
+    'HandlerLock',
+    'HandlerUnlock',
+    'HandlerTransportCreate',
+    // Fail-closed: a future/unknown tool must be blocked, not allowed:
+    'SomeFutureMutator',
+    'RuntimeCreateProfilerTraceParameters',
   ];
   const runtimeExec = [
     'RuntimeRunProgramWithProfiling',
     'RuntimeRunClassWithProfiling',
+    'HandlerProfileRun',
+  ];
+  const unitTestExec = [
+    'RunUnitTest',
+    'RunClassUnitTestsLow',
+    'HandlerUnitTestRun',
   ];
   const reads = [
     'GetClass',
+    'GetCallGraph',
     'ReadProgram',
     'SearchObject',
     'GetSqlQuery',
+    'GrepObjects',
+    'GrepPackages',
+    'DescribeByList',
+    'CheckSyntax',
     'RuntimeAnalyzeDump',
     'RuntimeListDumps',
     'RuntimeGetDumpById',
     'ValidateServiceBinding',
+    // Compact-group dispatcher reads:
+    'HandlerGet',
+    'HandlerCheckRun',
+    'HandlerDumpList',
+    'HandlerProfileView',
+    'HandlerCdsUnitTestStatus',
   ];
 
   it('DEV tier allows everything', () => {
-    for (const t of [...mutations, ...runtimeExec, 'RunUnitTest', ...reads]) {
+    for (const t of [...mutations, ...runtimeExec, ...unitTestExec, ...reads]) {
       expect(checkToolAllowed(t, 'DEV')).toBeNull();
     }
   });
@@ -50,8 +85,10 @@ describe('readonlyGuard — checkToolAllowed (pure matrix)', () => {
     }
   });
 
-  it('QA tier allows RunUnitTest', () => {
-    expect(checkToolAllowed('RunUnitTest', 'QA')).toBeNull();
+  it('QA tier allows unit-test execution', () => {
+    for (const t of unitTestExec) {
+      expect(checkToolAllowed(t, 'QA')).toBeNull();
+    }
   });
 
   it('QA tier allows reads and dump/profile analysis', () => {
@@ -66,8 +103,10 @@ describe('readonlyGuard — checkToolAllowed (pure matrix)', () => {
     }
   });
 
-  it('PRD tier blocks RunUnitTest (no QA allowlist applies)', () => {
-    expect(checkToolAllowed('RunUnitTest', 'PRD')).toMatch(/executes ABAP/);
+  it('PRD tier blocks unit-test execution (no QA allowlist applies)', () => {
+    for (const t of unitTestExec) {
+      expect(checkToolAllowed(t, 'PRD')).toMatch(/executes ABAP/);
+    }
   });
 
   it('PRD tier blocks runtime execution tools', () => {

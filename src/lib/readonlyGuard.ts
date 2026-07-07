@@ -7,36 +7,92 @@
  * last line of defense that fires even when the hook is missing, disabled,
  * or never installed.
  *
- * Block matrix (Strict policy, see sc4sap multi-profile-design.md §4):
+ * Enforcement model (fail-closed, Strict policy — see sc4sap
+ * multi-profile-design.md §4): on QA/PRD a tool is allowed only if it is
+ * positively classified read-only (READ_PREFIXES / READ_TOOLS) or passes the
+ * runtime-execution matrix. Anything unclassified — including future tools —
+ * is blocked. A denylist of mutation prefixes proved incomplete in practice:
+ * Activate*, Lock*, Unlock*, Patch*, Write* and the compact Handler* mutators
+ * (HandlerCreate, HandlerUpdate, …) all bypassed the original
+ * Create/Update/Delete check.
  *
- *   Tool family                                DEV   QA   PRD
- *   Create* / Update* / Delete*                 ✓    ✗    ✗
- *   CreateTransport                             ✓    ✗    ✗   (subset of Create*)
- *   RunUnitTest                                 ✓    ✓    ✗
- *   RuntimeRunProgramWithProfiling              ✓    ✗    ✗
- *   RuntimeRunClassWithProfiling                ✓    ✗    ✗
- *   RuntimeAnalyze* / RuntimeGet* / List*       ✓    ✓    ✓
- *   Get* / Read* / Search*                      ✓    ✓    ✓
+ * Block matrix:
+ *
+ *   Tool family                                       DEV   QA   PRD
+ *   Read-only (READ_PREFIXES / READ_TOOLS)             ✓    ✓    ✓
+ *   Unit-test execution (UNIT_TEST_EXECUTION_TOOLS)    ✓    ✓    ✗
+ *   Other runtime execution (RuntimeRun*, profiling)   ✓    ✗    ✗
+ *   Everything else (mutations + unclassified)         ✓    ✗    ✗
  */
 
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { getActiveAlias, getActiveTier, type Tier } from './profile';
 
-/** Prefixes that indicate a mutating operation on SAP. */
-const MUTATION_PREFIXES = ['Create', 'Update', 'Delete'] as const;
+/**
+ * Name prefixes that are read-only by construction across the whole registry.
+ * `Check*` / `Validate*` are ADT check runs (syntax/consistency) — they never
+ * persist changes. Runtime reads are covered by their three concrete
+ * prefixes; the bare `Runtime` prefix is deliberately NOT listed so that
+ * `RuntimeRun*` / `RuntimeCreate*` fall through to the blocked branch.
+ */
+const READ_PREFIXES = [
+  'Get',
+  'Read',
+  'Search',
+  'List',
+  'Grep',
+  'Describe',
+  'Check',
+  'Validate',
+  'RuntimeAnalyze',
+  'RuntimeGet',
+  'RuntimeList',
+] as const;
 
-/** Tools that execute ABAP code and may have state-changing side effects. */
-const RUNTIME_EXECUTION_TOOLS: ReadonlySet<string> = new Set([
-  'RunUnitTest',
-  'RuntimeRunProgramWithProfiling',
-  'RuntimeRunClassWithProfiling',
+/**
+ * Exact-name read-only tools that do not match a read prefix — the compact
+ * group's dispatcher-style names.
+ */
+const READ_TOOLS: ReadonlySet<string> = new Set([
+  'HandlerGet',
+  'HandlerCheckRun',
+  'HandlerValidate',
+  'HandlerDumpList',
+  'HandlerDumpView',
+  'HandlerProfileList',
+  'HandlerProfileView',
+  'HandlerUnitTestResult',
+  'HandlerUnitTestStatus',
+  'HandlerCdsUnitTestResult',
+  'HandlerCdsUnitTestStatus',
+  'HandlerServiceBindingListTypes',
+  'HandlerServiceBindingValidate',
 ]);
 
-/** Tools that are allowed on QA despite being in RUNTIME_EXECUTION_TOOLS. */
-const QA_RUNTIME_ALLOWLIST: ReadonlySet<string> = new Set(['RunUnitTest']);
+/**
+ * Tools that execute ABAP unit tests. Test execution is legitimate on QA
+ * (that is what QA systems are for) but stays blocked on PRD.
+ */
+const UNIT_TEST_EXECUTION_TOOLS: ReadonlySet<string> = new Set([
+  'RunUnitTest',
+  'RunClassUnitTestsLow',
+  'HandlerUnitTestRun',
+]);
 
-function isMutation(toolName: string): boolean {
-  return MUTATION_PREFIXES.some((p) => toolName.startsWith(p));
+/**
+ * Tools that execute arbitrary ABAP (profiling runs) — blocked on QA and PRD.
+ */
+const RUNTIME_EXECUTION_TOOLS: ReadonlySet<string> = new Set([
+  'RuntimeRunProgramWithProfiling',
+  'RuntimeRunClassWithProfiling',
+  'HandlerProfileRun',
+]);
+
+function isReadOnly(toolName: string): boolean {
+  return (
+    READ_TOOLS.has(toolName) ||
+    READ_PREFIXES.some((p) => toolName.startsWith(p))
+  );
 }
 
 /**
@@ -46,18 +102,20 @@ function isMutation(toolName: string): boolean {
 export function checkToolAllowed(toolName: string, tier: Tier): string | null {
   if (tier === 'DEV') return null;
 
-  if (isMutation(toolName)) {
-    return `${toolName} mutates SAP objects; only DEV profiles may mutate.`;
-  }
-
-  if (RUNTIME_EXECUTION_TOOLS.has(toolName)) {
-    if (tier === 'QA' && QA_RUNTIME_ALLOWLIST.has(toolName)) {
-      return null;
-    }
+  if (UNIT_TEST_EXECUTION_TOOLS.has(toolName)) {
+    if (tier === 'QA') return null;
     return `${toolName} executes ABAP code on the server and is blocked on ${tier} profiles.`;
   }
 
-  return null;
+  if (RUNTIME_EXECUTION_TOOLS.has(toolName)) {
+    return `${toolName} executes ABAP code on the server and is blocked on ${tier} profiles.`;
+  }
+
+  if (isReadOnly(toolName)) return null;
+
+  // Fail closed: mutations (Create*, Update*, Delete*, Activate*, Lock*, …)
+  // and any tool this guard cannot positively classify as read-only.
+  return `${toolName} mutates SAP objects (or is not classified read-only); only DEV profiles may run it.`;
 }
 
 /**
