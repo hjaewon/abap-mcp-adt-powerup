@@ -1,4 +1,4 @@
-<!-- Fork of https://github.com/fr0ster/mcp-abap-adt — original project by fr0ster -->
+<!-- Fork lineage: mario-andreschak/mcp-abap-adt → fr0ster/mcp-abap-adt → babamba2/abap-mcp-adt-powerup → hjaewon/abap-mcp-adt-powerup (current) -->
 
 # Contributors
 
@@ -10,9 +10,11 @@ We welcome contributions! Please see the project documentation for details on ho
 
 ## Contributors
 
-<!-- Contributors are listed by number of commits (descending) -->
+<!-- Contributors are listed by fork lineage, then by number of commits (descending) -->
 
-- **Oleksii Kyslytsia** ([@fr0ster](https://github.com/fr0ster)) - Main maintainer and contributor (539 commits)
+- **Hong Jaewon** ([@hjaewon](https://github.com/hjaewon)) - Current fork maintainer
+- **Paek Seunghyun** ([@babamba2](https://github.com/babamba2)) - abap-mcp-adt-powerup author (upstream fork)
+- **Oleksii Kyslytsia** ([@fr0ster](https://github.com/fr0ster)) - mcp-abap-adt maintainer and contributor (539 commits)
 - **mario-andreschak** ([@mario-andreschak](https://github.com/mario-andreschak)) - Original project maintainer (30 commits)
 - **Henry Mao** ([@calclavia](https://github.com/calclavia)) - Contributor (3 commits)
 - **Aleksandr Razinkin** ([@raaleksandr-epam](https://github.com/raaleksandr-epam)) - Contributor (2 commits)

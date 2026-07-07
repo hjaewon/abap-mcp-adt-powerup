@@ -1,6 +1,6 @@
 # MCP ABAP ADT ( For sc4sap application )
 
-**🌐 Language / 언어 / 言語**: [English](README.md) · **한국어** · [日本語](README.ja.md)
+**🌐 Language / 언어 / 言語**: [English](README.md) · **한국어**
 
 [![npm version](https://img.shields.io/npm/v/@hjaewon/abap-mcp-adt-powerup)](https://www.npmjs.com/package/@hjaewon/abap-mcp-adt-powerup)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -117,7 +117,7 @@ npm install -g @hjaewon/abap-mcp-adt-powerup
 ### 소스에서 설치
 
 ```bash
-git clone --recurse-submodules https://github.com/babamba2/abap-mcp-adt-powerup.git
+git clone --recurse-submodules https://github.com/hjaewon/abap-mcp-adt-powerup.git
 cd abap-mcp-adt-powerup
 npm install
 npm run build
@@ -140,7 +140,7 @@ npm start
 
 ```bash
 # 마켓플레이스 등록 (최초 1회)
-/plugin marketplace add babamba2/abap-mcp-adt-powerup
+/plugin marketplace add hjaewon/abap-mcp-adt-powerup
 
 # 플러그인 설치
 /plugin install abap-mcp-adt-powerup
@@ -436,7 +436,7 @@ npm run docker:up:package
 ### 셋업
 
 ```bash
-git clone --recurse-submodules https://github.com/babamba2/abap-mcp-adt-powerup.git
+git clone --recurse-submodules https://github.com/hjaewon/abap-mcp-adt-powerup.git
 cd abap-mcp-adt-powerup
 npm install
 npm run build
@@ -601,7 +601,7 @@ export SC4SAP_ALLOW_TABLE=TAB1,TAB2        # 세션 한정 긴급 예외 (로그
 
 내장 차단 목록은 은행(BNKA, KNBK, LFBK, REGUH), 고객/거래처 PII(KNA1, LFA1, BUT000, BUT0ID), 주소(ADRC, ADR6, ADRP), 인증(USR02, RFCDES, AGR_1251), HR/급여(`PA*` / `HRP*` / `PCL*`), 세금 ID, 보호 대상 거래 데이터(VBAK/BKPF/ACDOCA), 감사 로그, 커스텀 `Z*` PII 패턴 등 100+ 테이블/패턴을 포함합니다.
 
-본 기능은 [sc4sap](https://github.com/babamba2/superclaude-for-sap) 플러그인과 함께 쓰이도록 설계되었지만 **sc4sap에 종속되지 않습니다** — 어떤 MCP 클라이언트든 이 기능의 혜택을 받을 수 있습니다.
+본 기능은 [sc4sap](https://github.com/hjaewon/superclaude-for-sap) 플러그인과 함께 쓰이도록 설계되었지만 **sc4sap에 종속되지 않습니다** — 어떤 MCP 클라이언트든 이 기능의 혜택을 받을 수 있습니다.
 
 ---
 

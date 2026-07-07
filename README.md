@@ -1,6 +1,6 @@
 # MCP ABAP ADT ( For sc4sap application )
 
-**🌐 Language / 언어 / 言語**: **English** · [한국어](README.ko.md) · [日本語](README.ja.md)
+**🌐 Language / 언어 / 言語**: **English** · [한국어](README.ko.md)
 
 [![npm version](https://img.shields.io/npm/v/@hjaewon/abap-mcp-adt-powerup)](https://www.npmjs.com/package/@hjaewon/abap-mcp-adt-powerup)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -154,7 +154,7 @@ npm install -g @hjaewon/abap-mcp-adt-powerup
 ### From source
 
 ```bash
-git clone --recurse-submodules https://github.com/babamba2/abap-mcp-adt-powerup.git
+git clone --recurse-submodules https://github.com/hjaewon/abap-mcp-adt-powerup.git
 cd abap-mcp-adt-powerup
 npm install
 npm run build
@@ -177,7 +177,7 @@ This repository is also distributed as a **Claude Code plugin** via the marketpl
 
 ```bash
 # Add this marketplace (once)
-/plugin marketplace add babamba2/abap-mcp-adt-powerup
+/plugin marketplace add hjaewon/abap-mcp-adt-powerup
 
 # Install the plugin
 /plugin install abap-mcp-adt-powerup
@@ -523,7 +523,7 @@ See [Docker Deployment Guide](docs/deployment/DOCKER.md) for full details.
 ### Setup
 
 ```bash
-git clone --recurse-submodules https://github.com/babamba2/abap-mcp-adt-powerup.git
+git clone --recurse-submodules https://github.com/hjaewon/abap-mcp-adt-powerup.git
 cd abap-mcp-adt-powerup
 npm install
 npm run build
@@ -578,10 +578,10 @@ mcp-abap-adt/
 
 | Package | Purpose |
 |---------|---------|
-| `@mcp-abap-adt/adt-clients` | ADT REST API clients |
-| `@mcp-abap-adt/connection` | SAP connection management |
-| `@mcp-abap-adt/auth-broker` | Authentication token management |
-| `@mcp-abap-adt/auth-providers` | Auth strategy implementations |
+| `@babamba2/mcp-abap-adt-clients` | ADT REST API clients |
+| `@babamba2/mcp-abap-connection` | SAP connection management |
+| `@babamba2/mcp-abap-adt-auth-broker` | Authentication token management |
+| `@babamba2/mcp-abap-adt-auth-providers` | Auth strategy implementations |
 | `@modelcontextprotocol/sdk` | MCP protocol SDK |
 | `fast-xml-parser` | XML parsing for ADT responses |
 
@@ -751,7 +751,7 @@ When a blocked table is accessed, the server responds with `isError: true` and a
 
 Built-in blocklist covers 100+ tables / patterns across Banking (BNKA, KNBK, LFBK, REGUH), Customer/Vendor PII (KNA1, LFA1, BUT000, BUT0ID), Addresses (ADRC, ADR6, ADRP), Authentication (USR02, RFCDES, AGR_1251), HR/Payroll (`PA*` / `HRP*` / `PCL*`), Tax IDs, Protected Business Data (VBAK/BKPF/ACDOCA), Audit logs, and customer `Z*` PII patterns.
 
-This feature is **designed for but not coupled to** the [sc4sap](https://github.com/babamba2/superclaude-for-sap) plugin — any MCP client can benefit from it.
+This feature is **designed for but not coupled to** the [sc4sap](https://github.com/hjaewon/superclaude-for-sap) plugin — any MCP client can benefit from it.
 
 ---
 

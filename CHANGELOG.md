@@ -1,4 +1,4 @@
-<!-- Fork of https://github.com/fr0ster/mcp-abap-adt — original project by fr0ster -->
+<!-- Fork lineage: mario-andreschak/mcp-abap-adt → fr0ster/mcp-abap-adt → babamba2/abap-mcp-adt-powerup → hjaewon/abap-mcp-adt-powerup (current) -->
 
 # Changelog
 
@@ -80,12 +80,41 @@ First release under `@hjaewon/abap-mcp-adt-powerup` (independent fork; upstream 
 ### Fixed
 - Keychain password resolution in broker-based auth path. `EnvFileSessionStore` (from `@babamba2/mcp-abap-adt-auth-stores`) reads `SAP_PASSWORD` raw from the .env file and does not know about `keychain:<service>/<account>` references, so `authBroker.getConnectionConfig()` returned the literal reference string as the Basic Auth password → 401 → account lockout after 3 tries. `profile.ts activateProfile()` only fixed `process.env.SAP_PASSWORD`, which the v2 broker architecture (`lib/utils.ts:515` "No fallback to getConfig()") does not read. `brokerFactory.ts` now calls `resolveSecret()` on both `createBrokerWithEnvFileStore` (Variant 2, --env=path) and `loadEnvFileIntoSessionStore` (Variant 3, cwd .env) and seeds the session store's `inMemoryUpdates` so downstream reads return plaintext.
 
+## [4.8.2] - 2026-04-23
+
+### Fixed
+- Transport handlers (3 bugs): `ListTransports` parser looked for `tm:request` directly under `tm:workbench` and missed the `tm:modifiable` / `tm:released` middle layer — silently returned 0 transports (new `collectRequests()` walks every category × status combination). `GetTransport` unifies the S/4 single-TR path URL vs the ECC user-scoped list (new `owner` input param for cross-user queries on ECC; response gains `resolved_via` / `view_type`). Accept header now content-negotiates `transportorganizertree.v1+xml` alongside `transportorganizer.v1+xml` (S/4 rejected the latter with HTTP 406). Not-found throws `McpError(InvalidParams)` instead of returning a 200 all-nulls stub.
+
 ## [4.8.1] - 2026-04-22
 
 ### Added
 - ECC 7.40 DDIC write fallback via OData RFC. 9 handlers (Domain/DataElement/Table × CRUD) activate on `SAP_VERSION=ECC`, routing DDIC writes through server-side FMs (`ZMCP_ADT_DDIC_{TABL,DTEL,DOMA,ACTIVATE}`) invoked via OData FunctionImports on `ZMCP_ADT_SRV`. Full implementations: Domain C/U/D + DataElement C/U/D (type_kind=domain only) + Table Delete. Inform-only: Table Create/Update (CDS-DDL translator deferred).
 - `lib/odataRfc.ts`: `callDdicTabl / DdicDtel / DdicDoma / DdicActivate` + `DdicResult` type.
 - `lib/rfcBackend.ts`: 4 new wrappers + informative error for non-odata backends.
+
+## [4.8.0] - 2026-04-21
+
+### Added
+- Multi-profile activation on server start (`profile.ts`) — `.sc4sap` profile files select the active SAP destination.
+- Server-side readonly guard (`readonlyGuard.ts`) — tier-based (DEV/QA/PRD) block matrix that fires before every handler on non-DEV tiers; last line of defense independent of any client-side hook.
+- Secrets management via `@napi-rs/keyring` (optional dep, `secrets.ts`) — `SAP_PASSWORD=keychain:<service>/<account>` resolves from the OS keychain.
+- `ReloadProfile` handler (system/readonly) — escape hatch to switch back to a DEV profile.
+- `zcl_mcp_rfc_http_handler.abap` sample + ZRFC_SETUP guide + architecture.html.
+
+### Fixed
+- Legacy SAP `GetPackage` emits a `legacy_limited` flag instead of throwing on missing metadata.
+
+## [4.7.1] - 2026-04-19
+
+### Changed
+- Version-alignment release (package metadata only, no code changes).
+
+## [4.7.0] - 2026-04-17
+
+### Added
+- Runtime feeds: `RuntimeListFeeds` (descriptor+dumps+sm+gw single reader), `RuntimeListSystemMessages` (SM02), `RuntimeGetGatewayErrorLog` (/IWFND/ERROR_LOG list + detail), `RuntimeGetDumpById` `response_mode={payload,summary,both}`. ADT Atom-feed parsing ported locally (upstream adt-clients 3.10.2 does not expose the v5 FeedRepository).
+- Mass activation: `ActivateObjects` — batch activation via a single `/sap/bc/adt/activation/runs` call, resolving cyclic cross-references that break per-include activation. `ActivateObjectLow` honors the input `uri`; `CreateInclude` gains `source_code` + `activate_main_program`.
+- `PatchGuiStatus` (GUI status surgical patch) and `WriteTextElementsBulk` (text-elements bulk write).
 
 ## [4.5.2] - 2026-03-27
 

@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.babamba2/abap-mcp-adt-powerup",
+  "name": "io.github.hjaewon/abap-mcp-adt-powerup",
   "description": "MCP server for SAP ABAP ADT: repository analysis and CRUD for RAP and classic ABAP",
   "repository": {
-    "url": "https://github.com/babamba2/abap-mcp-adt-powerup",
+    "url": "https://github.com/hjaewon/abap-mcp-adt-powerup",
     "source": "github"
   },
-  "version": "4.5.2",
+  "version": "4.11.0",
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "@babamba2/abap-mcp-adt-powerup",
-      "version": "4.5.2",
+      "identifier": "@hjaewon/abap-mcp-adt-powerup",
+      "version": "4.11.0",
       "transport": {
         "type": "stdio"
       }
