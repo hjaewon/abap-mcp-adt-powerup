@@ -18,7 +18,7 @@
     "format": "npx biome format --write src",
     "build": "npx biome check --write --diagnostic-level=error src && npx tsc -p tsconfig.json",
     "build:fast": "npx tsc -p tsconfig.json",
-    "bundle": "esbuild dist/server/launcher.js --bundle --platform=node --format=cjs --target=node20 --outfile=dist/server.bundle.cjs --external:node-rfc --external:@napi-rs/keyring --external:pino --external:pino-pretty --log-level=warning",
+    "bundle": "node tools/bundle.mjs",
     "build:bundle": "npm run build && npm run bundle",
     "check-todos": "node tools/check-todos.js",
     "start": "node ./bin/mcp-abap-adt.js",

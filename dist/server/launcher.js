@@ -107,6 +107,14 @@ function hydrateSystemContextFromEnvFile(envFilePath) {
     }
 }
 function showVersion() {
+    // Bundle builds stamp the version at build time (tools/bundle.mjs, esbuild
+    // define). The package.json walk below is only correct when this file runs
+    // from inside this package — an embedded bundle (e.g. sc4sap's
+    // <plugin>/engine/) would find the host's package.json instead.
+    if (typeof __ENGINE_VERSION__ !== 'undefined' && __ENGINE_VERSION__) {
+        console.log(__ENGINE_VERSION__);
+        process.exit(0);
+    }
     // Walk upward so the lookup works from both dist/server/launcher.js and the
     // single-file bundle at dist/server.bundle.cjs.
     let dir = __dirname;

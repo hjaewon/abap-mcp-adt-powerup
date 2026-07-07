@@ -23,6 +23,10 @@ import { SseServer } from './SseServer.js';
 import { StdioServer } from './StdioServer.js';
 import { StreamableHttpServer } from './StreamableHttpServer.js';
 
+// Injected by tools/bundle.mjs (esbuild define) in bundle builds; undefined
+// when running the unbundled dist/server/launcher.js.
+declare const __ENGINE_VERSION__: string | undefined;
+
 const stderrLogger = {
   info: (...args: any[]) => console.error(...args),
   warn: (...args: any[]) => console.error(...args),
@@ -94,6 +98,14 @@ function hydrateSystemContextFromEnvFile(envFilePath?: string): void {
 }
 
 function showVersion(): void {
+  // Bundle builds stamp the version at build time (tools/bundle.mjs, esbuild
+  // define). The package.json walk below is only correct when this file runs
+  // from inside this package — an embedded bundle (e.g. sc4sap's
+  // <plugin>/engine/) would find the host's package.json instead.
+  if (typeof __ENGINE_VERSION__ !== 'undefined' && __ENGINE_VERSION__) {
+    console.log(__ENGINE_VERSION__);
+    process.exit(0);
+  }
   // Walk upward so the lookup works from both dist/server/launcher.js and the
   // single-file bundle at dist/server.bundle.cjs.
   let dir = __dirname;
