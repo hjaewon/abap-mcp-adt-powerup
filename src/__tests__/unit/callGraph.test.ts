@@ -114,15 +114,23 @@ describe('runCallGraphBfs', () => {
       from: 'CLAS:A',
       to: 'CLAS:B',
       kind: 'calls',
+      discovered_via: 'source_scan',
     });
     expect(result.edges).toContainEqual({
       from: 'CLAS:B',
       to: 'CLAS:A',
       kind: 'calls',
+      discovered_via: 'source_scan',
     });
   });
 
-  it('truncates and stops expansion once max_nodes is reached', async () => {
+  it('stops adding new nodes once max_nodes is reached, but keeps expanding the rest of the frontier so edges between already-known nodes are not lost', async () => {
+    // A -> C1, C2, C3, C4 (max_nodes=3 admits A, C1, C2 only; C3/C4 dropped).
+    // C1 -> C2 is an edge between two nodes that both survived the cap — it
+    // must still be emitted even though the cap was already hit while
+    // expanding A. Previously `if (truncated) return;` aborted C1/C2's own
+    // expansion entirely once the cap tripped, losing this edge and never
+    // even calling the expander for them.
     const table: Record<string, ExpandResult> = {
       'CLAS:A': {
         neighbors: [
@@ -133,7 +141,7 @@ describe('runCallGraphBfs', () => {
         ],
         expandable: true,
       },
-      'CLAS:C1': { neighbors: [], expandable: true },
+      'CLAS:C1': { neighbors: [neighbor('CLAS', 'C2')], expandable: true },
       'CLAS:C2': { neighbors: [], expandable: true },
     };
     const calls: string[] = [];
@@ -144,12 +152,27 @@ describe('runCallGraphBfs', () => {
     );
 
     expect(result.truncated).toBe(true);
-    expect(result.nodes).toHaveLength(3); // A + 2 children only
-    expect(result.stats.expanded).toBe(1); // C1/C2 never got expanded — cap hit first
-    expect(calls).toEqual(['CLAS:A']);
+    expect(result.nodes).toHaveLength(3); // A, C1, C2 only — C3/C4 dropped by the cap
+    expect(result.nodes.map((n) => n.id).sort()).toEqual([
+      'CLAS:A',
+      'CLAS:C1',
+      'CLAS:C2',
+    ]);
+    // C1 and C2 still get expanded at the next level despite the cap.
+    expect(calls.sort()).toEqual(['CLAS:A', 'CLAS:C1', 'CLAS:C2']);
+    expect(result.stats.expanded).toBe(3);
+    // The edge between two already-existing nodes survives the cap.
+    expect(result.edges).toContainEqual({
+      from: 'CLAS:C1',
+      to: 'CLAS:C2',
+      kind: 'calls',
+      discovered_via: 'source_scan',
+    });
+    // C3 and C4 were each proposed as a new node once and dropped.
+    expect(result.stats.unexpanded_due_to_cap).toBe(2);
   });
 
-  it('leaves a gated node as an unexpanded leaf without treating it as a failure', async () => {
+  it('leaves a gated node as an unexpanded leaf without treating it as a failure, and does not count it as expanded', async () => {
     // Emulates custom_only: the expander itself decides ZCL_ROOT expands, but
     // the standard object it discovers reports expandable:false.
     const table: Record<string, ExpandResult> = {
@@ -169,6 +192,9 @@ describe('runCallGraphBfs', () => {
     expect(leaf?.expandable).toBe(false);
     expect(result.nodes).toHaveLength(2);
     expect(result.skipped).toHaveLength(0);
+    // Only ZCL_ROOT did real expansion work; CL_STANDARD's gate (returning
+    // expandable:false without throwing) must not inflate `expanded`.
+    expect(result.stats.expanded).toBe(1);
   });
 
   it('records an expander failure in skipped instead of throwing', async () => {
@@ -230,16 +256,86 @@ describe('combineDirectionExpanders', () => {
     expect(result.edges).toContainEqual({
       from: 'CLAS:CALLER1',
       to: 'CLAS:X',
-      kind: 'used_by',
+      kind: 'calls',
+      discovered_via: 'where_used',
     });
     expect(result.edges).toContainEqual({
       from: 'CLAS:X',
       to: 'CLAS:CALLEE1',
       kind: 'calls',
+      discovered_via: 'source_scan',
     });
 
     // Root queried via both expanders; CALLER1 only via callers, CALLEE1 only via callees.
     expect(callersCalls).toEqual(['CLAS:X', 'CLAS:CALLER1']);
     expect(calleesCalls).toEqual(['CLAS:X', 'CLAS:CALLEE1']);
+  });
+
+  it('keeps the surviving direction neighbors and records the failure when one direction throws', async () => {
+    const rootId = 'CLAS:X';
+    const callersExpander: NodeExpander = async () => ({
+      neighbors: [neighbor('CLAS', 'CALLER1', 'caller')],
+      expandable: true,
+    });
+    const calleesExpander: NodeExpander = async () => {
+      throw new Error('callees boom');
+    };
+
+    const combined = combineDirectionExpanders(
+      rootId,
+      callersExpander,
+      calleesExpander,
+    );
+    const result = await runCallGraphBfs(
+      { object_type: 'CLAS', name: 'X' },
+      combined,
+      { maxDepth: 4, maxNodes: 100 },
+    );
+
+    // The callers direction's neighbor is still present...
+    expect(result.nodes.map((n) => n.id).sort()).toEqual([
+      'CLAS:CALLER1',
+      'CLAS:X',
+    ]);
+    expect(result.edges).toContainEqual({
+      from: 'CLAS:CALLER1',
+      to: 'CLAS:X',
+      kind: 'calls',
+      discovered_via: 'where_used',
+    });
+    // ...the root is still marked expandable (callers direction succeeded)...
+    const root = result.nodes.find((n) => n.id === rootId);
+    expect(root?.expandable).toBe(true);
+    // ...and the callees-direction failure is recorded, not silently dropped.
+    expect(result.skipped).toEqual([
+      { node: rootId, reason: expect.stringContaining('callees boom') },
+    ]);
+  });
+
+  it('gives up on the node only when BOTH directions throw', async () => {
+    const rootId = 'CLAS:X';
+    const callersExpander: NodeExpander = async () => {
+      throw new Error('callers boom');
+    };
+    const calleesExpander: NodeExpander = async () => {
+      throw new Error('callees boom');
+    };
+
+    const combined = combineDirectionExpanders(
+      rootId,
+      callersExpander,
+      calleesExpander,
+    );
+    const result = await runCallGraphBfs(
+      { object_type: 'CLAS', name: 'X' },
+      combined,
+      { maxDepth: 4, maxNodes: 100 },
+    );
+
+    expect(result.nodes).toHaveLength(1);
+    expect(result.nodes[0].expandable).toBe(false);
+    expect(result.skipped).toEqual([
+      { node: rootId, reason: expect.stringContaining('callers boom') },
+    ]);
   });
 });

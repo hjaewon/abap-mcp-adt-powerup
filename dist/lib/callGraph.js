@@ -52,20 +52,23 @@ async function runCallGraphBfs(root, expander, options) {
     const skipped = [];
     let truncated = false;
     let expanded = 0;
-    function addEdge(from, to, kind) {
-        const key = `${from}|${to}|${kind}`;
+    let unexpandedDueToCap = 0;
+    function addEdge(from, to, discoveredVia) {
+        const key = `${from}|${to}`;
         if (edgeKeys.has(key))
             return;
         edgeKeys.add(key);
-        edges.push({ from, to, kind });
+        edges.push({ from, to, kind: 'calls', discovered_via: discoveredVia });
     }
     let frontier = [rootId];
     let depth = 0;
     while (frontier.length > 0 && depth < maxDepth) {
         const nextFrontier = [];
+        // Note: frontier nodes keep being expanded even after `truncated` flips
+        // true (below) — an early return here would also skip picking up edges
+        // between nodes that already exist in the graph, which is the bug this
+        // fixes. Only the addition of brand-new nodes is capped.
         await (0, promisePool_1.runWithConcurrency)(frontier, concurrency, async (nodeId) => {
-            if (truncated)
-                return;
             const node = nodes.get(nodeId);
             if (!node)
                 return;
@@ -82,17 +85,22 @@ async function runCallGraphBfs(root, expander, options) {
                 return;
             }
             node.expandable = result.expandable;
-            expanded++;
+            if (result.partialFailure) {
+                skipped.push({ node: nodeId, reason: result.partialFailure });
+            }
             if (!result.expandable)
                 return;
+            expanded++;
             for (const neighbor of result.neighbors) {
                 const neighborId = makeNodeId(neighbor.object_type, neighbor.name);
-                const [from, to, kind] = neighbor.role === 'caller'
-                    ? [neighborId, nodeId, 'used_by']
-                    : [nodeId, neighborId, 'calls'];
+                const [from, to] = neighbor.role === 'caller'
+                    ? [neighborId, nodeId]
+                    : [nodeId, neighborId];
+                const discoveredVia = neighbor.role === 'caller' ? 'where_used' : 'source_scan';
                 if (!nodes.has(neighborId)) {
                     if (nodes.size >= maxNodes) {
                         truncated = true;
+                        unexpandedDueToCap++;
                         continue; // drop this neighbor entirely — keep nodes/edges consistent
                     }
                     nodes.set(neighborId, {
@@ -104,7 +112,7 @@ async function runCallGraphBfs(root, expander, options) {
                     });
                     nextFrontier.push(neighborId);
                 }
-                addEdge(from, to, kind);
+                addEdge(from, to, discoveredVia);
             }
         });
         frontier = nextFrontier;
@@ -120,8 +128,12 @@ async function runCallGraphBfs(root, expander, options) {
             edge_count: edges.length,
             expanded,
             skipped_count: skipped.length,
+            unexpanded_due_to_cap: unexpandedDueToCap,
         },
     };
+}
+function describeReason(reason) {
+    return reason instanceof Error ? reason.message : String(reason);
 }
 /**
  * Combines a callers-expander and a callees-expander into a single expander
@@ -134,10 +146,32 @@ function combineDirectionExpanders(rootId, callersExpander, calleesExpander) {
     const roleOf = new Map();
     return async (node) => {
         if (node.id === rootId) {
-            const [callersResult, calleesResult] = await Promise.all([
+            // Promise.allSettled (not Promise.all) so one direction throwing
+            // doesn't discard the neighbors the other direction already found —
+            // only give up entirely when BOTH directions fail.
+            const [callersOutcome, calleesOutcome] = await Promise.allSettled([
                 callersExpander(node),
                 calleesExpander(node),
             ]);
+            if (callersOutcome.status === 'rejected' &&
+                calleesOutcome.status === 'rejected') {
+                throw callersOutcome.reason instanceof Error
+                    ? callersOutcome.reason
+                    : new Error(String(callersOutcome.reason));
+            }
+            const callersResult = callersOutcome.status === 'fulfilled'
+                ? callersOutcome.value
+                : { neighbors: [], expandable: false };
+            const calleesResult = calleesOutcome.status === 'fulfilled'
+                ? calleesOutcome.value
+                : { neighbors: [], expandable: false };
+            const failures = [];
+            if (callersOutcome.status === 'rejected') {
+                failures.push(`callers direction failed: ${describeReason(callersOutcome.reason)}`);
+            }
+            if (calleesOutcome.status === 'rejected') {
+                failures.push(`callees direction failed: ${describeReason(calleesOutcome.reason)}`);
+            }
             for (const n of callersResult.neighbors) {
                 roleOf.set(makeNodeId(n.object_type, n.name), 'caller');
             }
@@ -149,6 +183,7 @@ function combineDirectionExpanders(rootId, callersExpander, calleesExpander) {
             return {
                 neighbors: [...callersResult.neighbors, ...calleesResult.neighbors],
                 expandable: callersResult.expandable || calleesResult.expandable,
+                partialFailure: failures.length > 0 ? failures.join('; ') : undefined,
             };
         }
         const role = roleOf.get(node.id) ?? 'callee';

@@ -33,6 +33,10 @@ const NAME_SEGMENT = '[A-Za-z_][A-Za-z0-9_]*';
 const METHOD_NAME_SOURCE = `(?:/${NAME_SEGMENT}/)?${NAME_SEGMENT}(?:~${NAME_SEGMENT})?`;
 const METHOD_START_RE = new RegExp(`^METHOD\\s+(${METHOD_NAME_SOURCE})(?=[\\s.]|$)`, 'i');
 const METHOD_END_RE = /^ENDMETHOD\s*\.\s*$/i;
+/** Detects a standalone ENDMETHOD. statement at the end of an already
+ * comment/string-masked line remainder — used to recognize a complete
+ * one-line `METHOD x. ... ENDMETHOD.` implementation. */
+const METHOD_END_INLINE_RE = /\bENDMETHOD\s*\.\s*$/i;
 function splitLines(source) {
     return source.split(/\r\n|\r|\n/);
 }
@@ -99,7 +103,20 @@ function listMethodImplementations(source) {
         if (!current) {
             const startMatch = code.match(METHOD_START_RE);
             if (startMatch) {
-                current = { name: startMatch[1], startLine: lineNo };
+                const remainder = code.slice(startMatch[0].length);
+                if (METHOD_END_INLINE_RE.test(remainder)) {
+                    // Complete one-line method: `METHOD name. ... ENDMETHOD.` all on
+                    // this single line — do not open a boundary that would otherwise
+                    // stay open and swallow the next method implementation.
+                    results.push({
+                        name: startMatch[1],
+                        startLine: lineNo,
+                        endLine: lineNo,
+                    });
+                }
+                else {
+                    current = { name: startMatch[1], startLine: lineNo };
+                }
             }
             continue;
         }
@@ -165,6 +182,27 @@ function validateMethodBlock(source, expectedMethodName) {
         return {
             valid: false,
             error: `source must end with "ENDMETHOD." (found: "${lines[endIdx].trim()}")`,
+        };
+    }
+    // The METHOD statement itself must be terminated by a period before
+    // ENDMETHOD — the widened METHOD_START_RE lookahead (4.10.1) also matches
+    // a bare `METHOD name` with no period anywhere, which is not valid ABAP.
+    // The period may fall on a later line (AMDP's multi-line
+    // `BY DATABASE PROCEDURE ...` addition), so scan forward line by line
+    // (comment/string-masked) up to, but not including, the ENDMETHOD line.
+    let terminated = false;
+    const startRemainder = startCode.slice(startMatch[0].length);
+    for (let i = startIdx; i < endIdx; i++) {
+        const text = i === startIdx ? startRemainder : codeOnly(lines[i]);
+        if (text.includes('.')) {
+            terminated = true;
+            break;
+        }
+    }
+    if (!terminated) {
+        return {
+            valid: false,
+            error: `METHOD statement must be terminated by a period before ENDMETHOD (found: "${lines[startIdx].trim()}")`,
         };
     }
     const name = startMatch[1];

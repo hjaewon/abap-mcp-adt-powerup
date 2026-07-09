@@ -1,20 +1,24 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.classifySourceType = classifySourceType;
+exports.extractSourceData = extractSourceData;
 exports.fetchObjectSource = fetchObjectSource;
 const utils_1 = require("./utils");
 /**
  * Classifies a caller-supplied object_type (short code like "CLAS", or a raw
  * ADT type like "CLAS/OC", "PROG/I", "FUGR/FF") into one of the codes this
  * dispatcher knows how to handle. Standalone includes report ADT type
- * "PROG/I" (not "PROG/P"), so that prefix is checked before the generic
- * PROG/ prefix.
+ * "PROG/I" (not "PROG/P"); function-group includes (code living inside a
+ * function group, very common for FM implementations, e.g. "LZFOOF01")
+ * report "FUGR/I" — both are classified as INCL so their source is fetched
+ * via the standalone-include endpoint, so these prefixes are checked before
+ * the generic PROG/ and FUGR/ prefixes below.
  */
 function classifySourceType(rawType) {
     const t = (rawType ?? '').trim().toUpperCase();
     if (!t)
         return undefined;
-    if (t === 'INCL' || t.startsWith('PROG/I'))
+    if (t === 'INCL' || t.startsWith('PROG/I') || t.startsWith('FUGR/I'))
         return 'INCL';
     if (t === 'CLAS' || t.startsWith('CLAS/'))
         return 'CLAS';

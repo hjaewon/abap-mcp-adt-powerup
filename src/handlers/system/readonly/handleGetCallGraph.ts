@@ -37,10 +37,15 @@ import {
 import { createAdtClient } from '../../../lib/clients';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
 import {
-  classifySourceType,
+  extractSourceData,
   fetchObjectSource,
 } from '../../../lib/objectSourceFetch';
 import { ErrorCode, McpError } from '../../../lib/utils';
+import {
+  isCalleeFetchableType,
+  resolveFuncCalleeTarget,
+  resolveNeighborObjectType,
+} from './callGraphHelpers';
 
 const ROOT_OBJECT_TYPES = new Set(['CLAS', 'INTF', 'PROG', 'FUGR', 'FUNC']);
 const MAX_DEPTH = 4;
@@ -173,7 +178,7 @@ function buildCallersExpander(
     const neighbors: CallGraphNeighbor[] = [];
     for (const ref of result.references) {
       if (!ref.name) continue;
-      const refType = classifySourceType(ref.type) ?? 'OTHER';
+      const refType = resolveNeighborObjectType(ref.type);
       const neighborId = makeNodeId(refType, ref.name);
       if (neighborId === node.id) continue; // skip self-reference
 
@@ -194,35 +199,61 @@ function buildCallersExpander(
 }
 
 /**
- * Builds the 'callees' direction expander: fetches a node's source (Phase-2
- * fetchObjectSource) and scans it (scanAbapDependencies) for classes,
- * interfaces, and function modules it references. Fetch failures (404,
- * structurally-unsupported types like FUNC) are thrown so the BFS engine
- * records them in `skipped` instead of silently dropping the reason.
+ * Builds the 'callees' direction expander: fetches a node's source and scans
+ * it (scanAbapDependencies) for classes, interfaces, and function modules it
+ * references. Fetch failures (404, structurally-unsupported types) are
+ * thrown so the BFS engine records them in `skipped` instead of silently
+ * dropping the reason.
+ *
+ * FUNC nodes are a special case: fetchObjectSource (Phase-2
+ * objectSourceFetch) always reports FUNC as unsupported because it cannot
+ * resolve a function module's group from its name alone. When the group IS
+ * known for this node — the user-supplied function_group for the root, or a
+ * group captured by buildCallersExpander via a where-used reference URI —
+ * fetch the function module's source directly instead. Unknown group falls
+ * through to fetchObjectSource's existing (unchanged) skip behavior.
  */
 function buildCalleesExpander(
   client: AdtClient,
   connection: IAbapConnection,
   logger: ILogger | undefined,
   customOnly: boolean,
+  functionGroupOf: Map<string, string>,
 ): NodeExpander {
   return async (node: CallGraphNode): Promise<ExpandResult> => {
     if (customOnly && node.depth > 0 && !isCustomObject(node.name)) {
       return { neighbors: [], expandable: false };
     }
-    if (node.object_type === 'OTHER') {
+    if (!isCalleeFetchableType(node.object_type)) {
       return { neighbors: [], expandable: false };
     }
 
-    const { source, skipReason } = await fetchObjectSource(
-      client,
-      connection,
-      node.object_type,
-      node.name,
-      logger,
-    );
-    if (skipReason || source == null) {
-      throw new Error(skipReason ?? 'Source not available');
+    let source: string | null;
+    const funcTarget = resolveFuncCalleeTarget(node, functionGroupOf);
+    if (funcTarget) {
+      const result = await client.getFunctionModule().read(
+        {
+          functionModuleName: funcTarget.functionModuleName,
+          functionGroupName: funcTarget.functionGroupName,
+        },
+        'active',
+      );
+      source = extractSourceData(result?.readResult?.data);
+      if (source == null) {
+        throw new Error('Function module source not available');
+      }
+    } else {
+      const fetched = await fetchObjectSource(
+        client,
+        connection,
+        node.object_type,
+        node.name,
+        logger,
+      );
+      if (fetched.skipReason || fetched.source == null) {
+        throw new Error(fetched.skipReason ?? 'Source not available');
+      }
+      source = fetched.source;
     }
 
     const deps = scanAbapDependencies(source);
@@ -328,6 +359,7 @@ export async function handleGetCallGraph(
       connection,
       logger,
       customOnly,
+      functionGroupOf,
     );
 
     let expander: NodeExpander;

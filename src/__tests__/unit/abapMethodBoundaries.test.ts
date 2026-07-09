@@ -215,6 +215,99 @@ describe('abapMethodBoundaries', () => {
       });
     });
 
+    it('locates a one-line method (METHOD a. ... ENDMETHOD. on a single line) followed by a normal method, keeping both independently addressable', () => {
+      // Regression for the 4.10.1 METHOD_START_RE widening: it opened a
+      // boundary at the one-line METHOD but never saw the same-line
+      // ENDMETHOD, so the boundary swallowed the next method too.
+      const source = [
+        'CLASS zcl_foo IMPLEMENTATION.',
+        '  METHOD a. RETURN. ENDMETHOD.',
+        '  METHOD b.',
+        '    DATA(lv_x) = 1.',
+        '  ENDMETHOD.',
+        'ENDCLASS.',
+      ].join('\n');
+
+      expect(listMethodImplementations(source)).toEqual([
+        { name: 'a', startLine: 2, endLine: 2 },
+        { name: 'b', startLine: 3, endLine: 5 },
+      ]);
+      expect(findMethodBoundary(source, 'a')).toEqual({
+        name: 'a',
+        startLine: 2,
+        endLine: 2,
+      });
+      expect(findMethodBoundary(source, 'b')).toEqual({
+        name: 'b',
+        startLine: 3,
+        endLine: 5,
+      });
+    });
+
+    it('splices a one-line method without deleting the next method (data-loss regression)', () => {
+      const source = [
+        'CLASS zcl_foo IMPLEMENTATION.',
+        '  METHOD a. RETURN. ENDMETHOD.',
+        '  METHOD b.',
+        '    DATA(lv_x) = 1.',
+        '  ENDMETHOD.',
+        'ENDCLASS.',
+      ].join('\n');
+
+      const boundaryA = requireBoundary(source, 'a');
+      const replacement = ['METHOD a.', '  RETURN 42.', 'ENDMETHOD.'].join(
+        '\n',
+      );
+      const spliced = spliceMethodSource(source, boundaryA, replacement);
+
+      expect(spliced.split('\n')).toEqual([
+        'CLASS zcl_foo IMPLEMENTATION.',
+        'METHOD a.',
+        '  RETURN 42.',
+        'ENDMETHOD.',
+        '  METHOD b.',
+        '    DATA(lv_x) = 1.',
+        '  ENDMETHOD.',
+        'ENDCLASS.',
+      ]);
+
+      // Method b must still be independently locatable, fully intact, at its
+      // shifted position.
+      const bAfter = findMethodBoundary(spliced, 'b');
+      expect(bAfter).toEqual({ name: 'b', startLine: 5, endLine: 7 });
+      expect(extractMethodSource(spliced, bAfter as MethodBoundary)).toBe(
+        ['  METHOD b.', '    DATA(lv_x) = 1.', '  ENDMETHOD.'].join('\n'),
+      );
+    });
+
+    it('locates a one-line method that is the last method in the file', () => {
+      const source = [
+        'CLASS zcl_foo IMPLEMENTATION.',
+        '  METHOD only_one. RETURN. ENDMETHOD.',
+        'ENDCLASS.',
+      ].join('\n');
+
+      expect(listMethodImplementations(source)).toEqual([
+        { name: 'only_one', startLine: 2, endLine: 2 },
+      ]);
+    });
+
+    it('lists a file made entirely of one-line methods, alongside a normal multi-line one', () => {
+      const source = [
+        'METHOD a. RETURN. ENDMETHOD.',
+        'METHOD b. RETURN. ENDMETHOD.',
+        'METHOD c.',
+        '  DATA(lv) = 1.',
+        'ENDMETHOD.',
+      ].join('\n');
+
+      expect(listMethodImplementations(source)).toEqual([
+        { name: 'a', startLine: 1, endLine: 1 },
+        { name: 'b', startLine: 2, endLine: 2 },
+        { name: 'c', startLine: 3, endLine: 5 },
+      ]);
+    });
+
     it('returns null and an accurate available-methods list when not found', () => {
       const source = [
         '  METHOD alpha.',
@@ -283,6 +376,24 @@ describe('abapMethodBoundaries', () => {
         '  lt_result = select * from t001;',
         'ENDMETHOD.',
       ].join('\n');
+      expect(validateMethodBlock(block, 'get_data')).toEqual({
+        valid: true,
+        name: 'get_data',
+      });
+    });
+
+    it('rejects a METHOD statement that never terminates with a period (widened-regex regression)', () => {
+      // The 4.10.1 METHOD_START_RE widening (lookahead instead of a
+      // full-line anchor) made a bare "METHOD name" with no period anywhere
+      // match as a valid start line. Must still be rejected.
+      const block = ['METHOD get_data', 'ENDMETHOD.'].join('\n');
+      const result = validateMethodBlock(block, 'get_data');
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/terminated by a period/i);
+    });
+
+    it('accepts a METHOD ... REDEFINITION.-style addition since it terminates with a period (no addition enumeration)', () => {
+      const block = ['METHOD get_data REDEFINITION.', 'ENDMETHOD.'].join('\n');
       expect(validateMethodBlock(block, 'get_data')).toEqual({
         valid: true,
         name: 'get_data',
