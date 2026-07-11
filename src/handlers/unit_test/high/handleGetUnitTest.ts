@@ -1,11 +1,13 @@
 /**
- * GetUnitTest Handler - Read ABAP Unit test status/result via AdtClient
+ * GetUnitTest Handler - Read ABAP Unit test status/result
  *
- * Uses AdtClient.getUnitTest().read() for high-level read operation.
- * Retrieves test run status and result for a previously started run.
+ * RunUnitTest runs synchronously via the classic ADT endpoint (see
+ * ../../../lib/abapUnitClassic.ts) and caches the `<aunit:runResult>` XML
+ * under a generated run_id — this looks it back up (combined status+result
+ * view of the same cache the Status/Result handlers read).
  */
 
-import { createAdtClient } from '../../../lib/clients';
+import { getUnitTestRun } from '../../../lib/abapUnitClassic';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
 import {
   type AxiosResponse,
@@ -37,7 +39,7 @@ interface GetUnitTestArgs {
 /**
  * Main handler for GetUnitTest MCP tool
  *
- * Uses AdtClient.getUnitTest().read() - high-level read operation
+ * Uses getUnitTestRun() to look up the cached synchronous run result.
  */
 export async function handleGetUnitTest(
   context: HandlerContext,
@@ -52,49 +54,31 @@ export async function handleGetUnitTest(
       return return_error(new Error('run_id is required'));
     }
 
-    const client = createAdtClient(connection, logger);
-    const unitTest = client.getUnitTest();
-
     logger?.info(`Reading unit test run status/result for run_id: ${run_id}`);
 
-    try {
-      // Read test run using AdtClient
-      const readResult = await unitTest.read({ runId: run_id });
-
-      if (!readResult) {
-        throw new Error(`Unit test run ${run_id} not found`);
-      }
-
-      logger?.info(
-        `✅ GetUnitTest completed successfully for run_id: ${run_id}`,
-      );
-
-      return return_response({
-        data: JSON.stringify(
-          {
-            success: true,
-            run_id: readResult.runId,
-            run_status: readResult.runStatus,
-            run_result: readResult.runResult,
-          },
-          null,
-          2,
+    const resultXml = getUnitTestRun(connection, run_id);
+    if (resultXml === undefined) {
+      return return_error(
+        new Error(
+          `Unknown run_id "${run_id}" — no cached result (invalid run_id, or the server process restarted since RunUnitTest was called).`,
         ),
-      } as AxiosResponse);
-    } catch (error: any) {
-      logger?.error(
-        `Error reading unit test run ${run_id}: ${error?.message || error}`,
       );
-
-      // Parse error message
-      let errorMessage = `Failed to read unit test run: ${error.message || String(error)}`;
-
-      if (error.response?.status === 404) {
-        errorMessage = `Unit test run ${run_id} not found.`;
-      }
-
-      return return_error(new Error(errorMessage));
     }
+
+    logger?.info(`✅ GetUnitTest completed successfully for run_id: ${run_id}`);
+
+    return return_response({
+      data: JSON.stringify(
+        {
+          success: true,
+          run_id,
+          run_status: { status: 'completed' },
+          run_result: resultXml,
+        },
+        null,
+        2,
+      ),
+    } as AxiosResponse);
   } catch (error: any) {
     return return_error(error);
   }

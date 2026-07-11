@@ -1,10 +1,13 @@
 /**
- * GetUnitTestStatus Handler - Read ABAP Unit test run status via AdtClient
+ * GetUnitTestStatus Handler - Read ABAP Unit test run status
  *
- * Uses AdtClient.getUnitTest().getStatus() for status retrieval.
+ * RunUnitTest now runs synchronously via the classic ADT endpoint (see
+ * ../../../lib/abapUnitClassic.ts) and caches the result under a generated
+ * run_id — there is no server-side async run to poll, so this simply
+ * reports "completed" for any run_id present in that cache.
  */
 
-import { createAdtClient } from '../../../lib/clients';
+import { getUnitTestRun } from '../../../lib/abapUnitClassic';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
 import {
   type AxiosResponse,
@@ -41,7 +44,7 @@ interface GetUnitTestStatusArgs {
 /**
  * Main handler for GetUnitTestStatus MCP tool
  *
- * Uses AdtClient.getUnitTest().getStatus()
+ * Uses getUnitTestRun() to look up the cached synchronous run result.
  */
 export async function handleGetUnitTestStatus(
   context: HandlerContext,
@@ -55,31 +58,30 @@ export async function handleGetUnitTestStatus(
       return return_error(new Error('run_id is required'));
     }
 
-    const client = createAdtClient(connection, logger);
-    const unitTest = client.getUnitTest();
-
     logger?.info(`Reading unit test status for run_id: ${run_id}`);
 
-    try {
-      const readResult = await unitTest.read({ runId: run_id });
-
-      return return_response({
-        data: JSON.stringify(
-          {
-            success: true,
-            run_id,
-            run_status: readResult?.runStatus,
-          },
-          null,
-          2,
+    const resultXml = getUnitTestRun(connection, run_id);
+    if (resultXml === undefined) {
+      return return_error(
+        new Error(
+          `Unknown run_id "${run_id}" — no cached result (invalid run_id, or the server process restarted since RunUnitTest was called).`,
         ),
-      } as AxiosResponse);
-    } catch (error: any) {
-      logger?.error(
-        `Error reading unit test status ${run_id}: ${error?.message || error}`,
       );
-      return return_error(new Error(error?.message || String(error)));
     }
+
+    // The classic ADT endpoint is synchronous (see abapUnitClassic.ts), so
+    // by the time a run_id exists in the cache, the run has already finished.
+    return return_response({
+      data: JSON.stringify(
+        {
+          success: true,
+          run_id,
+          run_status: { status: 'completed' },
+        },
+        null,
+        2,
+      ),
+    } as AxiosResponse);
   } catch (error: any) {
     return return_error(error);
   }

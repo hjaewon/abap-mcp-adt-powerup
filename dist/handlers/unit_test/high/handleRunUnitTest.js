@@ -1,14 +1,19 @@
 "use strict";
 /**
- * RunUnitTest Handler - Start ABAP Unit test run via AdtClient
+ * RunUnitTest Handler - Start ABAP Unit test run via the classic ADT endpoint
  *
- * Uses AdtClient.getUnitTest().create() for high-level test run operation.
- * Starts unit test execution and returns run_id for status/result queries.
+ * Uses runClassicUnitTest() (see ../../../lib/abapUnitClassic.ts) instead of
+ * the vendored AdtClient.getUnitTest().create(), which posts to
+ * /sap/bc/adt/abapunit/runs — confirmed absent (404) via live discovery on
+ * both a modern S/4HANA 2021 on-prem system and a legacy BASIS 7.00 system.
+ * The classic endpoint is synchronous, so the result is cached locally and
+ * a generated run_id is returned for the subsequent GetUnitTestStatus /
+ * GetUnitTestResult calls.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOOL_DEFINITION = void 0;
 exports.handleRunUnitTest = handleRunUnitTest;
-const clients_1 = require("../../../lib/clients");
+const abapUnitClassic_1 = require("../../../lib/abapUnitClassic");
 const utils_1 = require("../../../lib/utils");
 exports.TOOL_DEFINITION = {
     name: 'RunUnitTest',
@@ -74,51 +79,47 @@ exports.TOOL_DEFINITION = {
 /**
  * Main handler for RunUnitTest MCP tool
  *
- * Uses AdtClient.getUnitTest().create() - high-level test run operation
+ * Uses runClassicUnitTest() - synchronous classic ADT test run operation
  */
 async function handleRunUnitTest(context, args) {
     const { connection, logger } = context;
     try {
-        const { tests, title, context: contextStr, scope, risk_level, duration, } = args;
+        const { tests, scope, risk_level, duration } = args;
         // Validation
         if (!Array.isArray(tests) || tests.length === 0) {
             return (0, utils_1.return_error)(new Error('tests array with at least one entry is required'));
         }
-        // Format tests for AdtClient
+        for (let i = 0; i < tests.length; i++) {
+            if (!tests[i]?.container_class?.trim() || !tests[i]?.test_class?.trim()) {
+                return (0, utils_1.return_error)(new Error(`tests[${i}] must include non-empty container_class and test_class`));
+            }
+        }
         const formattedTests = tests.map((test) => ({
             containerClass: test.container_class.toUpperCase(),
             testClass: test.test_class.toUpperCase(),
         }));
-        const client = (0, clients_1.createAdtClient)(connection, logger);
-        const unitTest = client.getUnitTest();
         logger?.info(`Starting ABAP Unit run for ${formattedTests.length} test definition(s)`);
         try {
-            // Create test run using AdtClient
-            const createResult = await unitTest.create({
-                tests: formattedTests,
-                options: {
-                    title,
-                    context: contextStr,
-                    scope: scope
-                        ? {
-                            ownTests: scope.own_tests,
-                            foreignTests: scope.foreign_tests,
-                            addForeignTestsAsPreview: scope.add_foreign_tests_as_preview,
-                        }
-                        : undefined,
-                    riskLevel: risk_level,
-                    duration,
-                },
+            // Run synchronously via the classic ADT endpoint and cache the result
+            // under a generated run_id (see ../../../lib/abapUnitClassic.ts).
+            const resultXml = await (0, abapUnitClassic_1.runClassicUnitTest)(connection, formattedTests, {
+                scope: scope
+                    ? {
+                        ownTests: scope.own_tests,
+                        foreignTests: scope.foreign_tests,
+                        addForeignTestsAsPreview: scope.add_foreign_tests_as_preview,
+                    }
+                    : undefined,
+                riskLevel: risk_level,
+                duration,
             });
-            if (!createResult.runId) {
-                throw new Error('Failed to start unit test run: run_id not returned');
-            }
-            logger?.info(`✅ RunUnitTest started. Run ID: ${createResult.runId}`);
+            const runId = (0, abapUnitClassic_1.storeUnitTestRun)(connection, resultXml);
+            logger?.info(`✅ RunUnitTest started. Run ID: ${runId}`);
             return (0, utils_1.return_response)({
                 data: JSON.stringify({
                     success: true,
-                    run_id: createResult.runId,
-                    message: `ABAP Unit run started. Use GetUnitTest with run_id ${createResult.runId} to get status and results.`,
+                    run_id: runId,
+                    message: `ABAP Unit run started. Use GetUnitTest with run_id ${runId} to get status and results. Note: the classic ADT endpoint runs all local test classes of each container class — per-test_class sub-selection is not supported by the protocol, so the result may include more test classes than requested.`,
                 }, null, 2),
             });
         }

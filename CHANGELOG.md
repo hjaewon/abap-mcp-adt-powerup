@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [4.13.1] - 2026-07-11
+
+### Fixed
+- **ABAP Unit execution never worked on on-prem releases** — `RunUnitTest` (and the run_id readers `GetUnitTestStatus` / `GetUnitTestResult` / `GetUnitTest`) posted to `/sap/bc/adt/abapunit/runs`, the ABAP-Cloud-only async API; live ADT discovery on both S/4HANA 2021 and BASIS 7.00 confirms the collection does not exist there (HTTP 404). The high-level handlers now use the classic Eclipse-ADT endpoint (`POST /sap/bc/adt/abapunit/testruns` with a `testruns.config.v1+xml` runConfiguration — including the `<options>` block whose absence makes SAP silently select zero tests, the trap the legacy path sits in) and bridge the synchronous response into the existing run_id contract via an in-memory, **connection-scoped**, TTL-bounded store (30 min / 200 runs, checked on read and write). Container-class names are URI-encoded (namespaced objects), responses without an `<aunit:runResult>` root are rejected instead of cached, the synchronous call gets a ≥5-minute timeout, per-`test_class` sub-selection being unsupported by the classic protocol is stated in the response, and `format:"junit"` is rejected explicitly. Verified live on S/4HANA 2021: 2 test classes / 4 methods, all pass.
+- **`CreateFunctionGroup` failed with HTTP 400 ("Daten sind ungültig und konnten nicht konvertiert werden") on systems advertising only `groups.v2`** — the vendored client hardcodes `functions.groups.v3+xml` (its own `ACCEPT_FUNCTION_GROUP` is "v2, v1" — asymmetric). The handler now negotiates the content type from the live ADT discovery document (quote/slash/absolute-href tolerant extraction, highest advertised version, per-connection cache; falls back to current defaults when discovery is silent). The legacy branch is untouched and skips negotiation entirely. A/B-probed on the same payload: v3→400, v2→200; verified create+activate+delete live.
+
 ## [4.13.0] - 2026-07-07
 
 ### Added

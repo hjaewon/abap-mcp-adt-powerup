@@ -10,7 +10,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOOL_DEFINITION = void 0;
 exports.handleCreateFunctionGroup = handleCreateFunctionGroup;
+const adtFunctionGroupContentTypes_1 = require("../../../lib/adtFunctionGroupContentTypes");
 const clients_1 = require("../../../lib/clients");
+const systemContext_1 = require("../../../lib/systemContext");
 const utils_1 = require("../../../lib/utils");
 exports.TOOL_DEFINITION = {
     name: 'CreateFunctionGroup',
@@ -65,8 +67,18 @@ async function handleCreateFunctionGroup(context, args) {
         const functionGroupName = typedArgs.function_group_name.toUpperCase();
         logger?.info(`Starting function group creation: ${functionGroupName}`);
         try {
-            // Create client
-            const client = (0, clients_1.createAdtClient)(connection);
+            // Create client. Function Group create is version-sensitive: the
+            // library default posts groups.v3+xml, which systems that only
+            // advertise v2 in ADT discovery reject with 400 ("Daten sind ungültig
+            // und konnten nicht konvertiert werden"). Negotiate the content type
+            // from the live discovery document; fall back to defaults when
+            // discovery is unavailable. Skipped on legacy systems — createAdtClient
+            // ignores injected contentTypes there (AdtClientLegacy keeps its Base
+            // defaults), so the discovery round-trip would be wasted.
+            const fgContentTypes = (0, systemContext_1.getSystemContext)().isLegacy
+                ? undefined
+                : await (0, adtFunctionGroupContentTypes_1.negotiateFunctionGroupContentTypes)(connection, logger);
+            const client = (0, clients_1.createAdtClient)(connection, undefined, fgContentTypes ? { contentTypes: fgContentTypes } : undefined);
             const shouldActivate = typedArgs.activate !== false; // Default to true if not specified
             // Validate
             logger?.info(`Validating function group: ${functionGroupName} with package: ${typedArgs.package_name}`);

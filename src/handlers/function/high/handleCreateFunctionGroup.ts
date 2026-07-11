@@ -7,8 +7,10 @@
  * Workflow: validate -> create -> (activate)
  */
 
+import { negotiateFunctionGroupContentTypes } from '../../../lib/adtFunctionGroupContentTypes';
 import { createAdtClient } from '../../../lib/clients';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
+import { getSystemContext } from '../../../lib/systemContext';
 import {
   type AxiosResponse,
   parseValidationResponse,
@@ -89,8 +91,22 @@ export async function handleCreateFunctionGroup(
     logger?.info(`Starting function group creation: ${functionGroupName}`);
 
     try {
-      // Create client
-      const client = createAdtClient(connection);
+      // Create client. Function Group create is version-sensitive: the
+      // library default posts groups.v3+xml, which systems that only
+      // advertise v2 in ADT discovery reject with 400 ("Daten sind ungültig
+      // und konnten nicht konvertiert werden"). Negotiate the content type
+      // from the live discovery document; fall back to defaults when
+      // discovery is unavailable. Skipped on legacy systems — createAdtClient
+      // ignores injected contentTypes there (AdtClientLegacy keeps its Base
+      // defaults), so the discovery round-trip would be wasted.
+      const fgContentTypes = getSystemContext().isLegacy
+        ? undefined
+        : await negotiateFunctionGroupContentTypes(connection, logger);
+      const client = createAdtClient(
+        connection,
+        undefined,
+        fgContentTypes ? { contentTypes: fgContentTypes } : undefined,
+      );
       const shouldActivate = typedArgs.activate !== false; // Default to true if not specified
 
       // Validate

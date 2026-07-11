@@ -1,13 +1,18 @@
 "use strict";
 /**
- * GetUnitTestResult Handler - Read ABAP Unit test run result via AdtClient
+ * GetUnitTestResult Handler - Read ABAP Unit test run result
  *
- * Uses AdtClient.getUnitTest().getResult() for result retrieval.
+ * RunUnitTest now runs synchronously via the classic ADT endpoint (see
+ * ../../../lib/abapUnitClassic.ts) and caches the raw `<aunit:runResult>`
+ * XML under a generated run_id. This just looks it back up. JUnit-format
+ * conversion is not available for the classic endpoint (no verified live
+ * endpoint for it), so `format: "junit"` is rejected explicitly rather than
+ * silently returning ABAP Unit-format data instead.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOOL_DEFINITION = void 0;
 exports.handleGetUnitTestResult = handleGetUnitTestResult;
-const clients_1 = require("../../../lib/clients");
+const abapUnitClassic_1 = require("../../../lib/abapUnitClassic");
 const utils_1 = require("../../../lib/utils");
 exports.TOOL_DEFINITION = {
     name: 'GetUnitTestResult',
@@ -37,32 +42,30 @@ exports.TOOL_DEFINITION = {
 /**
  * Main handler for GetUnitTestResult MCP tool
  *
- * Uses AdtClient.getUnitTest().getResult()
+ * Uses getUnitTestRun() to look up the cached synchronous run result.
  */
 async function handleGetUnitTestResult(context, args) {
     const { connection, logger } = context;
     try {
-        const { run_id, with_navigation_uris, format } = args;
+        const { run_id, format } = args;
         if (!run_id) {
             return (0, utils_1.return_error)(new Error('run_id is required'));
         }
-        const client = (0, clients_1.createAdtClient)(connection, logger);
-        const unitTest = client.getUnitTest();
+        if (format === 'junit') {
+            return (0, utils_1.return_error)(new Error('format "junit" is not available for the classic ADT ABAP Unit endpoint (no verified live endpoint for it). Omit format, or use "abapunit", to get the raw result.'));
+        }
         logger?.info(`Reading unit test result for run_id: ${run_id}`);
-        try {
-            const readResult = await unitTest.read({ runId: run_id });
-            return (0, utils_1.return_response)({
-                data: JSON.stringify({
-                    success: true,
-                    run_id,
-                    run_result: readResult?.runResult,
-                }, null, 2),
-            });
+        const resultXml = (0, abapUnitClassic_1.getUnitTestRun)(connection, run_id);
+        if (resultXml === undefined) {
+            return (0, utils_1.return_error)(new Error(`Unknown run_id "${run_id}" — no cached result (invalid run_id, or the server process restarted since RunUnitTest was called).`));
         }
-        catch (error) {
-            logger?.error(`Error reading unit test result ${run_id}: ${error?.message || error}`);
-            return (0, utils_1.return_error)(new Error(error?.message || String(error)));
-        }
+        return (0, utils_1.return_response)({
+            data: JSON.stringify({
+                success: true,
+                run_id,
+                run_result: resultXml,
+            }, null, 2),
+        });
     }
     catch (error) {
         return (0, utils_1.return_error)(error);
