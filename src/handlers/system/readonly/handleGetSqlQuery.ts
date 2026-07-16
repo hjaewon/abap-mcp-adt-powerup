@@ -124,32 +124,40 @@ export function parseSqlQueryXml(
       columnSections.forEach((section, index) => {
         if (index < columns.length) {
           const columnName = columns[index].name;
-          const dataMatches = section.match(
-            /<dataPreview:data[^>]*>(.*?)<\/dataPreview:data>/g,
-          );
-
-          if (dataMatches) {
-            columnData[columnName] = dataMatches.map((match) => {
-              const content = match.replace(/<[^>]+>/g, '');
-              return content || null;
-            });
-          } else {
-            columnData[columnName] = [];
+          // A NULL/empty cell is emitted as a self-closing <dataPreview:data/>.
+          // It must yield a positional null: dropping it shortens this column's
+          // array and every later value slides up a row, so the zip below pairs
+          // values from different rows (e.g. T001-ORT01 receiving another field's
+          // checktable). Match both forms in document order to keep rows aligned.
+          const dataRe =
+            /<dataPreview:data(?:\s[^>]*?)?\/>|<dataPreview:data(?:\s[^>]*?)?>([\s\S]*?)<\/dataPreview:data>/g;
+          const values: (string | null)[] = [];
+          for (const m of section.matchAll(dataRe)) {
+            // m[1] undefined => the self-closing form matched => NULL cell.
+            values.push(m[1] === undefined || m[1] === '' ? null : m[1]);
           }
+          columnData[columnName] = values;
         }
       });
 
       // Convert column-based data to row-based data
-      const maxRowCount = Math.max(
-        ...Object.values(columnData).map((arr) => arr.length),
-        0,
-      );
+      const lengths = Object.values(columnData).map((arr) => arr.length);
+      const maxRowCount = Math.max(...lengths, 0);
+
+      if (lengths.some((len) => len !== maxRowCount)) {
+        const shape = Object.entries(columnData)
+          .map(([k, v]) => `${k}:${v.length}`)
+          .join(' ');
+        logger?.error(
+          `parseSqlQueryXml: ragged columns, rows are NOT aligned (${shape})`,
+        );
+      }
 
       for (let rowIndex = 0; rowIndex < maxRowCount; rowIndex++) {
         const row: Record<string, any> = {};
         columns.forEach((column) => {
           const columnValues = columnData[column.name] || [];
-          row[column.name] = columnValues[rowIndex] || null;
+          row[column.name] = columnValues[rowIndex] ?? null;
         });
         rows.push(row);
       }

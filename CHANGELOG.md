@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [4.14.0] - 2026-07-16
+
+### Fixed
+- **`GetSqlQuery` / `GetTableContents` returned rows whose cells came from different rows whenever any cell was NULL.** ADT delivers dataPreview column-wise (one `<dataPreview:columns>` section per column, cells in row order); `parseSqlQueryXml` zips those columns back into rows positionally, but matched only the paired `<dataPreview:data>…</dataPreview:data>` form. A NULL cell arrives as a self-closing `<dataPreview:data/>`, so it was dropped outright — the column array shortened and every later value slid up one row. The parser now matches both forms in document order and materialises the self-closing one as a positional null. **The corruption was silent by construction**: on a `T001` read, one NULL cell shifted a column so a company code was paired with a *different* company code's chart of accounts and fiscal year variant — well-formed values that genuinely exist in the system, so neither a type check nor a plausibility read can catch it, and any cache populated from the old output holds them. Ragged columns (which no zip can rescue) are now reported via `logger.error` rather than silently yielding misaligned rows, and cell lookup uses `??` so a legitimately falsy cell is not coerced to null. Covered by `src/__tests__/parseSqlQueryXml.test.ts`.
+
+### Changed
+- **`GetCallGraph` — FUNC callee expansion and BFS robustness** (merge of `feat/bundle-dist`). The handler passes `functionGroupOf` into `buildCalleesExpander` so function modules expand in the callee direction (the group is captured by the callers expander from where-used URIs and shared through the same map). The BFS handles partial failures for `direction:'both'` via `Promise.allSettled`, normalises edges to `kind:'calls'` + `discovered_via`, keeps collecting edges between existing nodes after the `max_nodes` cap, and adds an `unexpanded_due_to_cap` stat. `abapMethodBoundaries` handles one-line `METHOD…ENDMETHOD` and requires the `METHOD` statement to be period-terminated (AMDP multi-line aware); `objectSourceFetch` classifies `FUGR/I` (function-group includes) as `INCL` and exports `extractSourceData` for direct FM source reads. Pure helpers extracted to `callGraphHelpers` with unit tests.
+
 ## [4.13.1] - 2026-07-11
 
 ### Fixed
