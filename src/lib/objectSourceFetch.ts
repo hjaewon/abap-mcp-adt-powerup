@@ -31,15 +31,19 @@ export interface FetchSourceResult {
  * Classifies a caller-supplied object_type (short code like "CLAS", or a raw
  * ADT type like "CLAS/OC", "PROG/I", "FUGR/FF") into one of the codes this
  * dispatcher knows how to handle. Standalone includes report ADT type
- * "PROG/I" (not "PROG/P"), so that prefix is checked before the generic
- * PROG/ prefix.
+ * "PROG/I" (not "PROG/P"); function-group includes (code living inside a
+ * function group, very common for FM implementations, e.g. "LZFOOF01")
+ * report "FUGR/I" — both are classified as INCL so their source is fetched
+ * via the standalone-include endpoint, so these prefixes are checked before
+ * the generic PROG/ and FUGR/ prefixes below.
  */
 export function classifySourceType(
   rawType: string,
 ): SourceObjectCode | undefined {
   const t = (rawType ?? '').trim().toUpperCase();
   if (!t) return undefined;
-  if (t === 'INCL' || t.startsWith('PROG/I')) return 'INCL';
+  if (t === 'INCL' || t.startsWith('PROG/I') || t.startsWith('FUGR/I'))
+    return 'INCL';
   if (t === 'CLAS' || t.startsWith('CLAS/')) return 'CLAS';
   if (t === 'PROG' || t.startsWith('PROG/')) return 'PROG';
   if (t === 'INTF' || t.startsWith('INTF/')) return 'INTF';
@@ -48,7 +52,7 @@ export function classifySourceType(
   return undefined;
 }
 
-function extractSourceData(data: unknown): string | null {
+export function extractSourceData(data: unknown): string | null {
   if (data === undefined || data === null) return null;
   if (typeof data === 'string') return data;
   try {

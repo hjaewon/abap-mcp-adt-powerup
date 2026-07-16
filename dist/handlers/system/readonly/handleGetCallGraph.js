@@ -7,6 +7,7 @@ const callGraph_1 = require("../../../lib/callGraph");
 const clients_1 = require("../../../lib/clients");
 const objectSourceFetch_1 = require("../../../lib/objectSourceFetch");
 const utils_1 = require("../../../lib/utils");
+const callGraphHelpers_1 = require("./callGraphHelpers");
 const ROOT_OBJECT_TYPES = new Set(['CLAS', 'INTF', 'PROG', 'FUGR', 'FUNC']);
 const MAX_DEPTH = 4;
 const MAX_MAX_NODES = 300;
@@ -117,7 +118,7 @@ function buildCallersExpander(client, functionGroupOf, customOnly) {
         for (const ref of result.references) {
             if (!ref.name)
                 continue;
-            const refType = (0, objectSourceFetch_1.classifySourceType)(ref.type) ?? 'OTHER';
+            const refType = (0, callGraphHelpers_1.resolveNeighborObjectType)(ref.type);
             const neighborId = (0, callGraph_1.makeNodeId)(refType, ref.name);
             if (neighborId === node.id)
                 continue; // skip self-reference
@@ -134,23 +135,46 @@ function buildCallersExpander(client, functionGroupOf, customOnly) {
     };
 }
 /**
- * Builds the 'callees' direction expander: fetches a node's source (Phase-2
- * fetchObjectSource) and scans it (scanAbapDependencies) for classes,
- * interfaces, and function modules it references. Fetch failures (404,
- * structurally-unsupported types like FUNC) are thrown so the BFS engine
- * records them in `skipped` instead of silently dropping the reason.
+ * Builds the 'callees' direction expander: fetches a node's source and scans
+ * it (scanAbapDependencies) for classes, interfaces, and function modules it
+ * references. Fetch failures (404, structurally-unsupported types) are
+ * thrown so the BFS engine records them in `skipped` instead of silently
+ * dropping the reason.
+ *
+ * FUNC nodes are a special case: fetchObjectSource (Phase-2
+ * objectSourceFetch) always reports FUNC as unsupported because it cannot
+ * resolve a function module's group from its name alone. When the group IS
+ * known for this node — the user-supplied function_group for the root, or a
+ * group captured by buildCallersExpander via a where-used reference URI —
+ * fetch the function module's source directly instead. Unknown group falls
+ * through to fetchObjectSource's existing (unchanged) skip behavior.
  */
-function buildCalleesExpander(client, connection, logger, customOnly) {
+function buildCalleesExpander(client, connection, logger, customOnly, functionGroupOf) {
     return async (node) => {
         if (customOnly && node.depth > 0 && !(0, callGraph_1.isCustomObject)(node.name)) {
             return { neighbors: [], expandable: false };
         }
-        if (node.object_type === 'OTHER') {
+        if (!(0, callGraphHelpers_1.isCalleeFetchableType)(node.object_type)) {
             return { neighbors: [], expandable: false };
         }
-        const { source, skipReason } = await (0, objectSourceFetch_1.fetchObjectSource)(client, connection, node.object_type, node.name, logger);
-        if (skipReason || source == null) {
-            throw new Error(skipReason ?? 'Source not available');
+        let source;
+        const funcTarget = (0, callGraphHelpers_1.resolveFuncCalleeTarget)(node, functionGroupOf);
+        if (funcTarget) {
+            const result = await client.getFunctionModule().read({
+                functionModuleName: funcTarget.functionModuleName,
+                functionGroupName: funcTarget.functionGroupName,
+            }, 'active');
+            source = (0, objectSourceFetch_1.extractSourceData)(result?.readResult?.data);
+            if (source == null) {
+                throw new Error('Function module source not available');
+            }
+        }
+        else {
+            const fetched = await (0, objectSourceFetch_1.fetchObjectSource)(client, connection, node.object_type, node.name, logger);
+            if (fetched.skipReason || fetched.source == null) {
+                throw new Error(fetched.skipReason ?? 'Source not available');
+            }
+            source = fetched.source;
         }
         const deps = (0, abapDependencyScan_1.scanAbapDependencies)(source);
         const neighbors = [
@@ -214,7 +238,7 @@ async function handleGetCallGraph(context, args) {
             functionGroupOf.set(rootId, functionGroup);
         }
         const callersExpander = buildCallersExpander(client, functionGroupOf, customOnly);
-        const calleesExpander = buildCalleesExpander(client, connection, logger, customOnly);
+        const calleesExpander = buildCalleesExpander(client, connection, logger, customOnly, functionGroupOf);
         let expander;
         if (direction === 'callers')
             expander = callersExpander;
