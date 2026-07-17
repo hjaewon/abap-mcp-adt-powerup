@@ -267,45 +267,46 @@ export async function handleCreateStructure(
         transportRequest: createStructureArgs.transport_request,
       });
 
+      // Check the generated DDL BEFORE taking the lock. Any extra request
+      // inside the LOCK→PUT window invalidates the ADT lock handle
+      // (live-verified: a checkrun between lock and upload ends the stateful
+      // session and the PUT fails with ExceptionResourceInvalidLockHandle),
+      // so the lock window below contains the source PUT only.
+      logger?.info(
+        `[CreateStructure] Checking generated DDL before update: ${structureName}`,
+      );
+      try {
+        await safeCheckOperation(
+          () =>
+            client.getStructure().check({ structureName, ddlCode }, 'inactive'),
+          structureName,
+          {
+            debug: (message: string) =>
+              logger?.debug(`[CreateStructure] ${message}`),
+          },
+        );
+      } catch (checkError: any) {
+        if (!(checkError as any).isAlreadyChecked) {
+          const rawCheckMessage =
+            checkError instanceof Error
+              ? checkError.message
+              : String(checkError);
+          // Same empty-detail guard as UpdateStructure: the vendored client
+          // throws 'Structure check failed: ' with no text on a 'notProcessed'
+          // status.
+          if (/failed:\s*$/.test(rawCheckMessage)) {
+            throw new Error(
+              `Structure check failed with status 'notProcessed' and no message text from the server — the structure was created but fields were not applied. Retry once; if it persists, apply the change via the abapGit ZIP+Pull path.`,
+            );
+          }
+          throw new Error(`Generated DDL check failed: ${rawCheckMessage}`);
+        }
+      }
+
       // Lock
       const lockHandle = await client.getStructure().lock({ structureName });
 
       try {
-        // Apply the generated DDL: check the new source, then upload it under
-        // the existing lock (mirrors handleUpdateStructure's check -> update).
-        logger?.info(
-          `[CreateStructure] Checking generated DDL before update: ${structureName}`,
-        );
-        try {
-          await safeCheckOperation(
-            () =>
-              client
-                .getStructure()
-                .check({ structureName, ddlCode }, 'inactive'),
-            structureName,
-            {
-              debug: (message: string) =>
-                logger?.debug(`[CreateStructure] ${message}`),
-            },
-          );
-        } catch (checkError: any) {
-          if (!(checkError as any).isAlreadyChecked) {
-            const rawCheckMessage =
-              checkError instanceof Error
-                ? checkError.message
-                : String(checkError);
-            // Same empty-detail guard as UpdateStructure: the vendored client
-            // throws 'Structure check failed: ' with no text on a 'notProcessed'
-            // status.
-            if (/failed:\s*$/.test(rawCheckMessage)) {
-              throw new Error(
-                `Structure check failed with status 'notProcessed' and no message text from the server — the structure was created but fields were not applied. Retry once; if it persists, apply the change via the abapGit ZIP+Pull path.`,
-              );
-            }
-            throw new Error(`Generated DDL check failed: ${rawCheckMessage}`);
-          }
-        }
-
         // Update with the generated DDL (uses the existing lock handle)
         await client.getStructure().update(
           {

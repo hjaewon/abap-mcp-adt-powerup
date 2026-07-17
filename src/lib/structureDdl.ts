@@ -182,6 +182,10 @@ export function generateStructureDdl(input: GenerateStructureDdlInput): string {
   if (description) {
     header.push(`@EndUserText.label : '${description.replace(/'/g, "''")}'`);
   }
+  // Without an enhancement category the ADT source PUT is rejected with
+  // "Kein Sichern wegen Fehler in Quelle" (live A/B-verified on S/4 2021);
+  // #NOT_EXTENSIBLE matches what ADT's own create template emits.
+  header.push('@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE');
   header.push(`define structure ${structureNameLower} {`);
 
   return [...header, ...bodyLines, '}'].join('\n');

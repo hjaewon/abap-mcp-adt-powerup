@@ -29,6 +29,16 @@ describe('generateStructureDdl', () => {
     );
   });
 
+  it('always emits the enhancement category header (ADT rejects the save without it)', () => {
+    const ddl = generateStructureDdl({
+      structureName: 'ZST_TEST',
+      fields: [{ name: 'ID', data_type: 'CHAR', length: 10 }],
+    });
+    expect(ddl).toContain(
+      '@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE\ndefine structure zst_test {',
+    );
+  });
+
   it('renders a built-in CHAR field with a length', () => {
     const ddl = generateStructureDdl({
       structureName: 'ZST_TEST',

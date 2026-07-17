@@ -4,7 +4,7 @@
  * Uses StructureBuilder from @babamba2/mcp-abap-adt-clients for all operations.
  * Session and lock management handled internally by builder.
  *
- * Workflow: lock -> check (new code) -> update (if check OK) -> unlock -> check (inactive version) -> (activate)
+ * Workflow: check (new code) -> lock -> update (if check OK) -> unlock -> check (inactive version) -> (activate)
  */
 
 import { XMLParser } from 'fast-xml-parser';
@@ -113,17 +113,17 @@ export async function handleUpdateStructure(
       // Create client
       const client = createAdtClient(connection);
 
-      // Build operation chain: lock -> check (new code) -> update (if check OK) -> unlock -> check (inactive version) -> (activate)
+      // Build operation chain: check (new code) -> lock -> update (if check OK) -> unlock -> check (inactive version) -> (activate)
       // Note: No validation needed for update - structure must already exist
       const shouldActivate = activate !== false; // Default to true if not specified
       let activateResponse: any | undefined;
       let lockHandle: string | undefined;
 
       try {
-        // Lock
-        lockHandle = await client.getStructure().lock({ structureName });
-
-        // Step 1: Check new code BEFORE update (with ddlCode and version='inactive')
+        // Step 1: Check new code BEFORE locking (with ddlCode and version='inactive').
+        // The check must NOT run inside the LOCK→PUT window — any extra request
+        // there invalidates the ADT lock handle and the source PUT then fails
+        // with ExceptionResourceInvalidLockHandle (live-verified).
         logger?.info(
           `[UpdateStructure] Checking new DDL code before update: ${structureName}`,
         );
@@ -173,6 +173,10 @@ export async function handleUpdateStructure(
             throw new Error(`New code check failed: ${rawCheckMessage}`);
           }
         }
+
+        // Lock — taken only after the check so the LOCK→PUT window contains
+        // the source PUT alone.
+        lockHandle = await client.getStructure().lock({ structureName });
 
         // Step 2: Update (only if check passed)
         if (checkNewCodePassed) {
