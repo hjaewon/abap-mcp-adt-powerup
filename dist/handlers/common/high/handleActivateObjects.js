@@ -22,7 +22,8 @@ const utils_1 = require("../../../lib/utils");
 exports.TOOL_DEFINITION = {
     name: 'ActivateObjects',
     available_in: ['onprem', 'cloud', 'legacy'],
-    description: '[high-level] Activate a set of ABAP objects in a single call. Uses the ADT mass-activation endpoint (/sap/bc/adt/activation/runs) so cyclic references between siblings (e.g. main program + multiple cross-referencing includes) resolve in one compilation scope. Returns per-object status, errors, warnings. Falls back to /sap/bc/adt/activation on legacy systems.',
+    description: '[high-level] Activate a set of ABAP objects in a single call. Uses the ADT mass-activation endpoint (/sap/bc/adt/activation/runs) so cyclic references between siblings (e.g. main program + multiple cross-referencing includes) resolve in one compilation scope. Returns per-object status, errors, warnings. Falls back to /sap/bc/adt/activation on legacy systems. ' +
+        "FUGR recipe: activating function modules alone fails with 'FUNCTION ... cannot be used ... FUNCTION-POOL' — pass the whole family in ONE call: the function group (type FUGR), its TOP include (FUGR/I with parent_name), every FM (FUGR/FF with parent_name), and the SAPL<fugr> main program (PROG/P) when present. Never mix unrelated objects into the same activation run — activate only the object family being worked.",
     inputSchema: {
         type: 'object',
         properties: {

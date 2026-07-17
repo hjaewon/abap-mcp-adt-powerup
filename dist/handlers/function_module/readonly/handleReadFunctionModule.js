@@ -7,7 +7,8 @@ const utils_1 = require("../../../lib/utils");
 exports.TOOL_DEFINITION = {
     name: 'ReadFunctionModule',
     available_in: ['onprem', 'cloud', 'legacy'],
-    description: '[read-only] Read ABAP function module source code and metadata (package, responsible, description, etc.).',
+    description: '[read-only] Read ABAP function module source code and metadata (package, responsible, description, etc.). ' +
+        "CAUTION: default version='active' returns the pre-edit source when an unactivated edit exists — when re-editing, read version='inactive' first, or the previous edit is silently lost on the next write. 'Active' source being returned is not proof of successful activation.",
     inputSchema: {
         type: 'object',
         properties: {
@@ -25,6 +26,11 @@ exports.TOOL_DEFINITION = {
                 description: 'Version to read: "active" (default) or "inactive".',
                 default: 'active',
             },
+            check_inactive: {
+                type: 'boolean',
+                description: 'Opt-in (default false). When reading the active version, also read the inactive version and, if an unactivated version exists and its source differs, attach a "warning" to the response. Costs one extra ADT call; recommended before re-editing an FM. The extra read never fails or slows the main read.',
+                default: false,
+            },
         },
         required: ['function_module_name', 'function_group_name'],
     },
@@ -32,7 +38,7 @@ exports.TOOL_DEFINITION = {
 async function handleReadFunctionModule(context, args) {
     const { connection, logger } = context;
     try {
-        const { function_module_name, function_group_name, version = 'active', } = args;
+        const { function_module_name, function_group_name, version = 'active', check_inactive = false, } = args;
         if (!function_module_name || !function_group_name)
             return (0, utils_1.return_error)(new Error('function_module_name and function_group_name are required'));
         const client = (0, clients_1.createAdtClient)(connection, logger);
@@ -68,6 +74,29 @@ async function handleReadFunctionModule(context, args) {
         catch (e) {
             logger?.warn(`Could not read metadata for ${functionModuleName}: ${e?.message}`);
         }
+        // Inactive-divergence check (opt-in): when reading the active version,
+        // read the inactive version and warn if a pending, differing edit exists.
+        // This extra read must never fail or slow-fail the main read.
+        let warning;
+        if (version === 'active' &&
+            check_inactive === true &&
+            source_code != null) {
+            try {
+                const inactiveResult = await obj.read({ functionModuleName, functionGroupName }, 'inactive');
+                if (inactiveResult?.readResult?.data != null) {
+                    const inactiveSource = typeof inactiveResult.readResult.data === 'string'
+                        ? inactiveResult.readResult.data
+                        : safeStringify(inactiveResult.readResult.data);
+                    if (inactiveSource !== source_code) {
+                        warning =
+                            "An inactive (unactivated) version of this function module exists and differs from the active source returned here — re-read with version='inactive' before editing, or the pending edit will be silently overwritten.";
+                    }
+                }
+            }
+            catch (e) {
+                logger?.debug?.(`Inactive-version check skipped for ${functionModuleName}: ${e?.message}`);
+            }
+        }
         return (0, utils_1.return_response)({
             data: JSON.stringify({
                 success: true,
@@ -76,6 +105,7 @@ async function handleReadFunctionModule(context, args) {
                 version,
                 source_code,
                 metadata,
+                warning,
             }, null, 2),
         });
     }
