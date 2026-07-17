@@ -129,43 +129,43 @@ export function parseSqlQueryXml(
       // Extract data for each column
       const columnData: Record<string, (string | null)[]> = {};
 
-      // Match BOTH open/close cells (<dataPreview:data>value</dataPreview:data>)
-      // AND self-closing cells (<dataPreview:data/> or <dataPreview:data .../>)
-      // in a single ordered pass. A self-closing cell maps to null while KEEPING
-      // its array position, so values in later rows do not shift up a row. The
-      // self-closing alternative is listed first so it wins for empty-element
-      // tags; \b after "data" prevents matching sibling tags like dataSet.
-      const cellRegex =
-        /<dataPreview:data\b[^>]*\/>|<dataPreview:data\b[^>]*>(.*?)<\/dataPreview:data>/g;
-
       columnSections.forEach((section, index) => {
         if (index < columns.length) {
           const columnName = columns[index].name;
-          columnData[columnName] = [...section.matchAll(cellRegex)].map(
-            (match) => {
-              // Self-closing cell → capture group is undefined → null.
-              if (match[1] === undefined) {
-                return null;
-              }
-              // Empty open/close content → null; whitespace-only preserved verbatim.
-              const content = match[1].replace(/<[^>]+>/g, '');
-              return content || null;
-            },
-          );
+          // A NULL/empty cell is emitted as a self-closing <dataPreview:data/>.
+          // It must yield a positional null: dropping it shortens this column's
+          // array and every later value slides up a row, so the zip below pairs
+          // values from different rows (e.g. T001-ORT01 receiving another field's
+          // checktable). Match both forms in document order to keep rows aligned.
+          const dataRe =
+            /<dataPreview:data(?:\s[^>]*?)?\/>|<dataPreview:data(?:\s[^>]*?)?>([\s\S]*?)<\/dataPreview:data>/g;
+          const values: (string | null)[] = [];
+          for (const m of section.matchAll(dataRe)) {
+            // m[1] undefined => the self-closing form matched => NULL cell.
+            values.push(m[1] === undefined || m[1] === '' ? null : m[1]);
+          }
+          columnData[columnName] = values;
         }
       });
 
       // Convert column-based data to row-based data
-      const maxRowCount = Math.max(
-        ...Object.values(columnData).map((arr) => arr.length),
-        0,
-      );
+      const lengths = Object.values(columnData).map((arr) => arr.length);
+      const maxRowCount = Math.max(...lengths, 0);
+
+      if (lengths.some((len) => len !== maxRowCount)) {
+        const shape = Object.entries(columnData)
+          .map(([k, v]) => `${k}:${v.length}`)
+          .join(' ');
+        logger?.error(
+          `parseSqlQueryXml: ragged columns, rows are NOT aligned (${shape})`,
+        );
+      }
 
       for (let rowIndex = 0; rowIndex < maxRowCount; rowIndex++) {
         const row: Record<string, any> = {};
         columns.forEach((column) => {
           const columnValues = columnData[column.name] || [];
-          row[column.name] = columnValues[rowIndex] || null;
+          row[column.name] = columnValues[rowIndex] ?? null;
         });
         rows.push(row);
       }

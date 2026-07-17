@@ -1784,7 +1784,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="deletestructure-high-level-structure"></a>
 #### DeleteStructure (High-Level / Structure)
-**Description:** Delete an ABAP structure from the SAP system. Includes deletion check before actual deletion. Transport request optional for $TMP objects.
+**Description:** Delete an ABAP structure from the SAP system. Locks the structure, deletes it via the ADT object URI, then verifies by reading it back — success is reported only when the server confirms the object is gone. Transport request optional for $TMP objects.
 
 **Source:** `src/handlers/structure/high/handleDeleteStructure.ts`
 

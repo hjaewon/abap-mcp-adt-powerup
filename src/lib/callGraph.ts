@@ -44,6 +44,13 @@ export interface ExpandResult {
   neighbors: CallGraphNeighbor[];
   /** Whether this node was eligible for expansion (type supported + custom_only gate). */
   expandable: boolean;
+  /**
+   * Set when part of the expansion failed but usable neighbors were still
+   * returned (e.g. one direction of a combined callers+callees expansion
+   * threw while the other succeeded). Recorded in the BFS result's
+   * `skipped` list without treating the node as fully failed.
+   */
+  partialFailure?: string;
 }
 
 export interface CallGraphNode extends CallGraphNodeRef {
@@ -60,7 +67,10 @@ export interface CallGraphNode extends CallGraphNodeRef {
 export interface CallGraphEdge {
   from: string;
   to: string;
-  kind: 'calls' | 'used_by';
+  /** Always 'calls': edges are normalized from-uses-to regardless of which direction discovered them. */
+  kind: 'calls';
+  /** How this edge was discovered: a where-used query (caller direction) or a source-code dependency scan (callee direction). */
+  discovered_via: 'where_used' | 'source_scan';
 }
 
 export interface SkippedNode {
@@ -73,6 +83,8 @@ export interface CallGraphStats {
   edge_count: number;
   expanded: number;
   skipped_count: number;
+  /** Candidate new nodes that were discovered but not added because max_nodes was already reached. */
+  unexpanded_due_to_cap: number;
 }
 
 export interface CallGraphResult {
@@ -126,12 +138,17 @@ export async function runCallGraphBfs(
   const skipped: SkippedNode[] = [];
   let truncated = false;
   let expanded = 0;
+  let unexpandedDueToCap = 0;
 
-  function addEdge(from: string, to: string, kind: 'calls' | 'used_by'): void {
-    const key = `${from}|${to}|${kind}`;
+  function addEdge(
+    from: string,
+    to: string,
+    discoveredVia: 'where_used' | 'source_scan',
+  ): void {
+    const key = `${from}|${to}`;
     if (edgeKeys.has(key)) return;
     edgeKeys.add(key);
-    edges.push({ from, to, kind });
+    edges.push({ from, to, kind: 'calls', discovered_via: discoveredVia });
   }
 
   let frontier = [rootId];
@@ -140,8 +157,11 @@ export async function runCallGraphBfs(
   while (frontier.length > 0 && depth < maxDepth) {
     const nextFrontier: string[] = [];
 
+    // Note: frontier nodes keep being expanded even after `truncated` flips
+    // true (below) — an early return here would also skip picking up edges
+    // between nodes that already exist in the graph, which is the bug this
+    // fixes. Only the addition of brand-new nodes is capped.
     await runWithConcurrency(frontier, concurrency, async (nodeId) => {
-      if (truncated) return;
       const node = nodes.get(nodeId);
       if (!node) return;
 
@@ -158,19 +178,25 @@ export async function runCallGraphBfs(
       }
 
       node.expandable = result.expandable;
-      expanded++;
+      if (result.partialFailure) {
+        skipped.push({ node: nodeId, reason: result.partialFailure });
+      }
       if (!result.expandable) return;
+      expanded++;
 
       for (const neighbor of result.neighbors) {
         const neighborId = makeNodeId(neighbor.object_type, neighbor.name);
-        const [from, to, kind]: [string, string, 'calls' | 'used_by'] =
+        const [from, to]: [string, string] =
           neighbor.role === 'caller'
-            ? [neighborId, nodeId, 'used_by']
-            : [nodeId, neighborId, 'calls'];
+            ? [neighborId, nodeId]
+            : [nodeId, neighborId];
+        const discoveredVia =
+          neighbor.role === 'caller' ? 'where_used' : 'source_scan';
 
         if (!nodes.has(neighborId)) {
           if (nodes.size >= maxNodes) {
             truncated = true;
+            unexpandedDueToCap++;
             continue; // drop this neighbor entirely — keep nodes/edges consistent
           }
           nodes.set(neighborId, {
@@ -182,7 +208,7 @@ export async function runCallGraphBfs(
           });
           nextFrontier.push(neighborId);
         }
-        addEdge(from, to, kind);
+        addEdge(from, to, discoveredVia);
       }
     });
 
@@ -200,8 +226,13 @@ export async function runCallGraphBfs(
       edge_count: edges.length,
       expanded,
       skipped_count: skipped.length,
+      unexpanded_due_to_cap: unexpandedDueToCap,
     },
   };
+}
+
+function describeReason(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason);
 }
 
 /**
@@ -220,10 +251,44 @@ export function combineDirectionExpanders(
 
   return async (node: CallGraphNode): Promise<ExpandResult> => {
     if (node.id === rootId) {
-      const [callersResult, calleesResult] = await Promise.all([
+      // Promise.allSettled (not Promise.all) so one direction throwing
+      // doesn't discard the neighbors the other direction already found —
+      // only give up entirely when BOTH directions fail.
+      const [callersOutcome, calleesOutcome] = await Promise.allSettled([
         callersExpander(node),
         calleesExpander(node),
       ]);
+
+      if (
+        callersOutcome.status === 'rejected' &&
+        calleesOutcome.status === 'rejected'
+      ) {
+        throw callersOutcome.reason instanceof Error
+          ? callersOutcome.reason
+          : new Error(String(callersOutcome.reason));
+      }
+
+      const callersResult: ExpandResult =
+        callersOutcome.status === 'fulfilled'
+          ? callersOutcome.value
+          : { neighbors: [], expandable: false };
+      const calleesResult: ExpandResult =
+        calleesOutcome.status === 'fulfilled'
+          ? calleesOutcome.value
+          : { neighbors: [], expandable: false };
+
+      const failures: string[] = [];
+      if (callersOutcome.status === 'rejected') {
+        failures.push(
+          `callers direction failed: ${describeReason(callersOutcome.reason)}`,
+        );
+      }
+      if (calleesOutcome.status === 'rejected') {
+        failures.push(
+          `callees direction failed: ${describeReason(calleesOutcome.reason)}`,
+        );
+      }
+
       for (const n of callersResult.neighbors) {
         roleOf.set(makeNodeId(n.object_type, n.name), 'caller');
       }
@@ -234,6 +299,7 @@ export function combineDirectionExpanders(
       return {
         neighbors: [...callersResult.neighbors, ...calleesResult.neighbors],
         expandable: callersResult.expandable || calleesResult.expandable,
+        partialFailure: failures.length > 0 ? failures.join('; ') : undefined,
       };
     }
 
