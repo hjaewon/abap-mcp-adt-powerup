@@ -32,7 +32,9 @@ export const TOOL_DEFINITION = {
     "[read-only] Run a standalone ABAP syntax check WITHOUT writing anything to SAP. Supports 'class', 'program', 'interface', 'include', and 'function_module'. " +
     'If source_code is provided (class/program/interface only), the proposed source is compiled in place and checked without touching the server. ' +
     'If source_code is omitted, checks whatever is currently staged as the inactive version on the server (mirroring the post-write check Update* handlers run). ' +
-    'Syntax errors are returned as normal results, not as tool errors — only connection/infra failures are reported as errors.',
+    'Syntax errors are returned as normal results, not as tool errors — only connection/infra failures are reported as errors. ' +
+    "NOTE: object_type='program' checked without source_code does NOT walk the include tree — it compiles only the main program body and misses errors inside includes, so it cannot be used to validate an entire function group in one call via its SAPL<fugr> main program. To validate a function group, call this tool once per function module with object_type='function_module' and the shared function_group_name — each call returns all of that module's errors with line:column. " +
+    'When checking raw source, the probe runs in a generated REPORT context without fixed-point arithmetic — Open SQL that is valid inside a function group can produce false errors.',
   inputSchema: {
     type: 'object',
     properties: {

@@ -529,7 +529,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="activateobjects-high-level-common"></a>
 #### ActivateObjects (High-Level / Common)
-**Description:** [high-level] Activate a set of ABAP objects in a single call. Uses the ADT mass-activation endpoint (/sap/bc/adt/activation/runs) so cyclic references between siblings (e.g. main program + multiple cross-referencing includes) resolve in one compilation scope. Returns per-object status, errors, warnings. Falls back to /sap/bc/adt/activation on legacy systems.
+**Description:** [high-level] Activate a set of ABAP objects in a single call. Uses the ADT mass-activation endpoint (/sap/bc/adt/activation/runs) so cyclic references between siblings (e.g. main program + multiple cross-referencing includes) resolve in one compilation scope. Returns per-object status, errors, warnings. Falls back to /sap/bc/adt/activation on legacy systems. 
 
 **Source:** `src/handlers/common/high/handleActivateObjects.ts`
 
@@ -1149,7 +1149,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="createfunctiongroup-high-level-function"></a>
 #### CreateFunctionGroup (High-Level / Function)
-**Description:** Create a new ABAP function group in SAP system. Function groups serve as containers for function modules. Uses stateful session for proper lock management.
+**Description:** Create a new ABAP function group in SAP system. Function groups serve as containers for function modules. Uses stateful session for proper lock management. 
 
 **Source:** `src/handlers/function/high/handleCreateFunctionGroup.ts`
 
@@ -1191,7 +1191,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="updatefunctionmodule-high-level-function"></a>
 #### UpdateFunctionModule (High-Level / Function)
-**Description:** Update source code of an existing ABAP function module. Locks the function module, uploads new source code, and unlocks. Optionally activates after update. Use this to modify existing function modules without re-creating metadata.
+**Description:** Update source code of an existing ABAP function module. Locks the function module, uploads new source code, and unlocks. Optionally activates after update. Use this to modify existing function modules without re-creating metadata. 
 
 **Source:** `src/handlers/function/high/handleUpdateFunctionModule.ts`
 
@@ -1249,11 +1249,12 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="getfunctionmodule-high-level-function-module"></a>
 #### GetFunctionModule (High-Level / Function Module)
-**Description:** Retrieve ABAP function module definition. Supports reading active or inactive version.
+**Description:** Retrieve ABAP function module definition. Supports reading active or inactive version. 
 
 **Source:** `src/handlers/function_module/high/handleGetFunctionModule.ts`
 
 **Parameters:**
+- `check_inactive` (boolean, optional (default: true)) - When reading the active version, also read the inactive version (one extra ADT call) and, if an unactivated version exists and its source differs, attach a 
 - `function_group_name` (string, required) - FunctionGroup name containing the function module (e.g., Z_MY_FUNCTIONGROUP).
 - `function_module_name` (string, required) - FunctionModule name (e.g., Z_MY_FUNCTIONMODULE).
 - `version` (string, optional (default: active)) - Version to read: 
@@ -1766,7 +1767,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="createstructure-high-level-structure"></a>
 #### CreateStructure (High-Level / Structure)
-**Description:** Create a new ABAP structure in SAP system with fields and type references. Includes create, activate, and verify steps.
+**Description:** Create a new ABAP structure in SAP system with fields and type references. Includes create, activate, and verify steps. 
 
 **Source:** `src/handlers/structure/high/handleCreateStructure.ts`
 
@@ -1807,7 +1808,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="updatestructure-high-level-structure"></a>
 #### UpdateStructure (High-Level / Structure)
-**Description:** Update DDL source code of an existing ABAP structure. Locks the structure, uploads new DDL source, and unlocks. Optionally activates after update. Use this to modify existing structures without re-creating metadata.
+**Description:** Update DDL source code of an existing ABAP structure. Locks the structure, uploads new DDL source, and unlocks. Optionally activates after update. Use this to modify existing structures without re-creating metadata. 
 
 **Source:** `src/handlers/structure/high/handleUpdateStructure.ts`
 
@@ -2239,4 +2240,4 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
-*Last updated: 2026-07-07*
+*Last updated: 2026-07-17*

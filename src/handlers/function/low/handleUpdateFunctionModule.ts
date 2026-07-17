@@ -22,7 +22,8 @@ export const TOOL_DEFINITION = {
   name: 'UpdateFunctionModuleLow',
   available_in: ['onprem', 'cloud', 'legacy'] as const,
   description:
-    '[low-level] Update source code of an existing ABAP function module. Requires lock handle from LockObject and function group name. - use UpdateFunctionModule (high-level) for full workflow with lock/unlock/activate.',
+    '[low-level] Update source code of an existing ABAP function module. Requires lock handle from LockObject and function group name. - use UpdateFunctionModule (high-level) for full workflow with lock/unlock/activate. ' +
+    'NOTE: the write persists (as the inactive version) even when the post-write syntax check fails, and check errors can originate from pre-existing defects in sibling FMs of the same function group — re-read the FM before assuming your write was lost. For repairs spanning many FMs prefer the abapGit path.',
   inputSchema: {
     type: 'object',
     properties: {

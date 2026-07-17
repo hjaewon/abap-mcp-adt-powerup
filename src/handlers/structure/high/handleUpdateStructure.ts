@@ -21,7 +21,8 @@ export const TOOL_DEFINITION = {
   name: 'UpdateStructure',
   available_in: ['onprem', 'cloud'] as const,
   description:
-    'Update DDL source code of an existing ABAP structure. Locks the structure, uploads new DDL source, and unlocks. Optionally activates after update. Use this to modify existing structures without re-creating metadata.',
+    'Update DDL source code of an existing ABAP structure. Locks the structure, uploads new DDL source, and unlocks. Optionally activates after update. Use this to modify existing structures without re-creating metadata. ' +
+    'KNOWN ISSUE: the pre-write check can fail with an empty error message (server returns notProcessed without message text) and the update is then not applied — if this repeats, use the abapGit ZIP+Pull path for structure changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -152,18 +153,24 @@ export async function handleUpdateStructure(
             checkNewCodePassed = true;
           } else {
             // Real check error - don't update if check failed
+            const rawCheckMessage =
+              checkError instanceof Error
+                ? checkError.message
+                : String(checkError);
             logger?.error(
               `[UpdateStructure] New code check failed: ${structureName}`,
-              {
-                error:
-                  checkError instanceof Error
-                    ? checkError.message
-                    : String(checkError),
-              },
+              { error: rawCheckMessage },
             );
-            throw new Error(
-              `New code check failed: ${checkError instanceof Error ? checkError.message : String(checkError)}`,
-            );
+            // The vendored client throws 'Structure check failed: ' with no
+            // detail when the ADT check run returns status 'notProcessed' and
+            // no check messages. Surface an actionable message instead of a
+            // blank one.
+            if (/failed:\s*$/.test(rawCheckMessage)) {
+              throw new Error(
+                `Structure check failed with status 'notProcessed' and no message text from the server — the update was not applied. Retry once; if it persists, apply the change via the abapGit ZIP+Pull path.`,
+              );
+            }
+            throw new Error(`New code check failed: ${rawCheckMessage}`);
           }
         }
 

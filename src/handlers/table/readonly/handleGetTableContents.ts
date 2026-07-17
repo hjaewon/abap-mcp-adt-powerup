@@ -13,7 +13,9 @@ export const TOOL_DEFINITION = {
   name: 'GetTableContents',
   available_in: ['onprem', 'cloud'] as const,
   description:
-    '[read-only] Retrieve contents (data preview) of an ABAP database table or CDS view. Returns rows of data like SE16/SE16N.',
+    '[read-only] Retrieve contents (data preview) of an ABAP database table or CDS view. Returns rows of data like SE16/SE16N. ' +
+    'When persisting results, record the actually returned row count and flag truncation by max_rows — never store the server-reported total as if fully fetched. ' +
+    'The response also reports returned_row_count (rows actually parsed), truncated (true when the max_rows cap was hit or the server total exceeds it), and server_total_rows (server-reported total when the XML provides it).',
   inputSchema: {
     table_name: z.string().describe('Name of the ABAP table'),
     max_rows: z

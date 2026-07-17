@@ -21,7 +21,8 @@ export const TOOL_DEFINITION = {
   name: 'CreateFunctionGroup',
   available_in: ['onprem', 'cloud', 'legacy'] as const,
   description:
-    'Create a new ABAP function group in SAP system. Function groups serve as containers for function modules. Uses stateful session for proper lock management.',
+    'Create a new ABAP function group in SAP system. Function groups serve as containers for function modules. Uses stateful session for proper lock management. ' +
+    'NOTE: on certain ambiguous HTTP 400 responses the tool verifies actual creation by reading the group back — success then carries verified:true with activated:false (activate separately); if verification finds no group, the original error is returned.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -331,21 +332,51 @@ export async function handleCreateFunctionGroup(
           detailedError.includes('Business partner')
         ) {
           logger?.warn(
-            `Function group creation returned known SAP error, but object may have been created: ${functionGroupName}`,
+            `Function group creation returned ambiguous SAP 400 (${functionGroupName}) — verifying existence before reporting success`,
           );
-          // Check if object was actually created by trying to get it
-          // For now, we'll assume it was created and return success
-          // This is a known issue with FunctionGroup creation in SAP
-          return return_response({
-            data: JSON.stringify({
-              success: true,
-              function_group_name: functionGroupName,
-              package_name: typedArgs.package_name,
-              transport_request: typedArgs.transport_request || 'local',
-              activated: typedArgs.activate !== false,
-              message: `Function group ${functionGroupName} may have been created successfully (SAP returned error but object exists)`,
-            }),
-          } as AxiosResponse);
+          // Do NOT assume success. Verify the object actually exists by reading
+          // it back; only report success when the read confirms it.
+          let verifiedExists = false;
+          try {
+            const verifyClient = createAdtClient(connection, logger);
+            const verifyState = await verifyClient
+              .getFunctionGroup()
+              .read({ functionGroupName });
+            const verifyStatus = verifyState?.readResult?.status;
+            verifiedExists =
+              !!verifyState?.readResult &&
+              (typeof verifyStatus !== 'number' || verifyStatus < 400);
+          } catch (verifyError: any) {
+            logger?.warn(
+              `Verification read for ${functionGroupName} did not find the group: ${verifyError?.message || verifyError}`,
+            );
+          }
+
+          if (verifiedExists) {
+            logger?.info(
+              `✅ Verified function group exists despite SAP 400: ${functionGroupName}`,
+            );
+            return return_response({
+              data: JSON.stringify({
+                success: true,
+                function_group_name: functionGroupName,
+                package_name: typedArgs.package_name,
+                transport_request: typedArgs.transport_request || 'local',
+                activated: false,
+                verified: true,
+                message: `Function group ${functionGroupName} creation returned SAP 400 (${detailedError}), but existence was verified via GetFunctionGroup. Activation was not performed — activate it explicitly if required.`,
+              }),
+            } as AxiosResponse);
+          }
+
+          logger?.error(
+            `Function group ${functionGroupName} not found after ambiguous SAP 400 — creation failed`,
+          );
+          return return_error(
+            new Error(
+              `Function group ${functionGroupName} creation failed: SAP returned 400 (${detailedError}) and verification via GetFunctionGroup found no such group.`,
+            ),
+          );
         }
 
         logger?.error(

@@ -9,6 +9,7 @@
 
 import { createAdtClient } from '../../../lib/clients';
 import type { HandlerContext } from '../../../lib/handlers/interfaces';
+import { generateStructureDdl } from '../../../lib/structureDdl';
 import {
   type AxiosResponse,
   ErrorCode,
@@ -23,7 +24,8 @@ export const TOOL_DEFINITION = {
   name: 'CreateStructure',
   available_in: ['onprem', 'cloud'] as const,
   description:
-    'Create a new ABAP structure in SAP system with fields and type references. Includes create, activate, and verify steps.',
+    'Create a new ABAP structure in SAP system with fields and type references. Includes create, activate, and verify steps. ' +
+    'The fields/includes input is generated into DDIC "define structure" DDL and applied under lock; creation fails explicitly (before any object is created) when a field spec is incomplete — e.g. a built-in type missing its length, or a field with neither data_element nor data_type.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -90,6 +92,16 @@ export const TOOL_DEFINITION = {
               type: 'string',
               description: 'Field description',
             },
+            currency_reference: {
+              type: 'string',
+              description:
+                'For CURR fields: name of the CUKY field in THIS structure that carries the currency key. Emits @Semantics.amount.currencyCode (optional).',
+            },
+            unit_reference: {
+              type: 'string',
+              description:
+                'For QUAN fields: name of the UNIT field in THIS structure that carries the unit of measure. Emits @Semantics.quantity.unitOfMeasure (optional).',
+            },
           },
           required: ['name'],
         },
@@ -132,6 +144,8 @@ interface StructureField {
   structure_ref?: string;
   table_ref?: string;
   description?: string;
+  currency_reference?: string;
+  unit_reference?: string;
 }
 
 interface StructureInclude {
@@ -190,6 +204,26 @@ export async function handleCreateStructure(
 
     const structureName = createStructureArgs.structure_name.toUpperCase();
 
+    // Generate the DDL up front so an incomplete field spec fails BEFORE any
+    // object is created (no empty placeholder left behind).
+    let ddlCode: string;
+    try {
+      ddlCode = generateStructureDdl({
+        structureName,
+        description: createStructureArgs.description,
+        fields: createStructureArgs.fields,
+        includes: createStructureArgs.includes,
+      });
+    } catch (genError: any) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Cannot generate structure DDL: ${genError instanceof Error ? genError.message : String(genError)}`,
+      );
+    }
+    const componentCount =
+      createStructureArgs.fields.length +
+      (createStructureArgs.includes?.length ?? 0);
+
     logger?.info(`Starting structure creation: ${structureName}`);
 
     try {
@@ -237,9 +271,53 @@ export async function handleCreateStructure(
       const lockHandle = await client.getStructure().lock({ structureName });
 
       try {
-        // Note: StructureBuilder internally generates DDL from fields/includes
-        // For now, skip update as structure creation already includes field definitions
-        // TODO: Implement DDL generation or enhance AdtClient to accept fields directly
+        // Apply the generated DDL: check the new source, then upload it under
+        // the existing lock (mirrors handleUpdateStructure's check -> update).
+        logger?.info(
+          `[CreateStructure] Checking generated DDL before update: ${structureName}`,
+        );
+        try {
+          await safeCheckOperation(
+            () =>
+              client
+                .getStructure()
+                .check({ structureName, ddlCode }, 'inactive'),
+            structureName,
+            {
+              debug: (message: string) =>
+                logger?.debug(`[CreateStructure] ${message}`),
+            },
+          );
+        } catch (checkError: any) {
+          if (!(checkError as any).isAlreadyChecked) {
+            const rawCheckMessage =
+              checkError instanceof Error
+                ? checkError.message
+                : String(checkError);
+            // Same empty-detail guard as UpdateStructure: the vendored client
+            // throws 'Structure check failed: ' with no text on a 'notProcessed'
+            // status.
+            if (/failed:\s*$/.test(rawCheckMessage)) {
+              throw new Error(
+                `Structure check failed with status 'notProcessed' and no message text from the server — the structure was created but fields were not applied. Retry once; if it persists, apply the change via the abapGit ZIP+Pull path.`,
+              );
+            }
+            throw new Error(`Generated DDL check failed: ${rawCheckMessage}`);
+          }
+        }
+
+        // Update with the generated DDL (uses the existing lock handle)
+        await client.getStructure().update(
+          {
+            structureName,
+            ddlCode,
+            transportRequest: createStructureArgs.transport_request,
+          },
+          { lockHandle },
+        );
+        logger?.info(
+          `[CreateStructure] Applied ${componentCount} field(s)/include(s) to ${structureName}`,
+        );
 
         // Unlock (MANDATORY after lock)
         await client.getStructure().unlock({ structureName }, lockHandle);
@@ -307,7 +385,8 @@ export async function handleCreateStructure(
           package_name: createStructureArgs.package_name,
           transport_request: createStructureArgs.transport_request || 'local',
           activated: shouldActivate,
-          message: `Structure ${structureName} created successfully${shouldActivate ? ' and activated' : ''}`,
+          fields_applied: componentCount,
+          message: `Structure ${structureName} created with ${componentCount} field(s)/include(s) applied${shouldActivate ? ' and activated' : ''}`,
         }),
       } as AxiosResponse);
     } catch (error: any) {

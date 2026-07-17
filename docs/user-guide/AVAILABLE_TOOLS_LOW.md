@@ -1174,7 +1174,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="updatefunctionmodulelow-low-level-function"></a>
 #### UpdateFunctionModuleLow (Low-Level / Function)
-**Description:** [low-level] Update source code of an existing ABAP function module. Requires lock handle from LockObject and function group name. - use UpdateFunctionModule (high-level) for full workflow with lock/unlock/activate.
+**Description:** [low-level] Update source code of an existing ABAP function module. Requires lock handle from LockObject and function group name. - use UpdateFunctionModule (high-level) for full workflow with lock/unlock/activate. 
 
 **Source:** `src/handlers/function/low/handleUpdateFunctionModule.ts`
 
@@ -2167,4 +2167,4 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
-*Last updated: 2026-07-07*
+*Last updated: 2026-07-17*

@@ -304,11 +304,12 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="readfunctionmodule-read-only-function-module"></a>
 #### ReadFunctionModule (Read-Only / Function Module)
-**Description:** [read-only] Read ABAP function module source code and metadata (package, responsible, description, etc.).
+**Description:** [read-only] Read ABAP function module source code and metadata (package, responsible, description, etc.). 
 
 **Source:** `src/handlers/function_module/readonly/handleReadFunctionModule.ts`
 
 **Parameters:**
+- `check_inactive` (boolean, optional (default: false)) - Opt-in (default false). When reading the active version, also read the inactive version and, if an unactivated version exists and its source differs, attach a 
 - `function_group_name` (string, required) - Function group name containing the function module (e.g., Z_MY_FG).
 - `function_module_name` (string, required) - Function module name (e.g., Z_MY_FM).
 - `version` (string, optional (default: active)) - Version to read: 
@@ -765,7 +766,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="getsqlquery-read-only-system"></a>
 #### GetSqlQuery (Read-Only / System)
-**Description:** [read-only] Execute ABAP SQL SELECT queries on database tables and CDS views via SAP ADT Data Preview API. Use for ad-hoc data retrieval, row counts, and filtered queries.
+**Description:** [read-only] Execute ABAP SQL SELECT queries on database tables and CDS views via SAP ADT Data Preview API. Use for ad-hoc data retrieval, row counts, and filtered queries. 
 
 **Source:** `src/handlers/system/readonly/handleGetSqlQuery.ts`
 
@@ -1039,7 +1040,7 @@ Generated from code in `src/handlers/**` (not from docs).
 
 <a id="gettablecontents-read-only-table"></a>
 #### GetTableContents (Read-Only / Table)
-**Description:** [read-only] Retrieve contents (data preview) of an ABAP database table or CDS view. Returns rows of data like SE16/SE16N.
+**Description:** [read-only] Retrieve contents (data preview) of an ABAP database table or CDS view. Returns rows of data like SE16/SE16N. 
 
 **Source:** `src/handlers/table/readonly/handleGetTableContents.ts`
 
@@ -1104,4 +1105,4 @@ Generated from code in `src/handlers/**` (not from docs).
 
 ---
 
-*Last updated: 2026-07-07*
+*Last updated: 2026-07-17*

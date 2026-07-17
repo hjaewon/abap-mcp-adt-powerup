@@ -19,7 +19,8 @@ export const TOOL_DEFINITION = {
   name: 'UpdateFunctionModule',
   available_in: ['onprem', 'cloud', 'legacy'] as const,
   description:
-    'Update source code of an existing ABAP function module. Locks the function module, uploads new source code, and unlocks. Optionally activates after update. Use this to modify existing function modules without re-creating metadata.',
+    'Update source code of an existing ABAP function module. Locks the function module, uploads new source code, and unlocks. Optionally activates after update. Use this to modify existing function modules without re-creating metadata. ' +
+    'NOTE: the write persists (as the inactive version) even when the post-write syntax check fails, and check errors can originate from pre-existing defects in sibling FMs of the same function group — re-read the FM before assuming your write was lost. For repairs spanning many FMs prefer the abapGit path.',
   inputSchema: {
     type: 'object',
     properties: {
